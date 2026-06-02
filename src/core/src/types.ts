@@ -1,11 +1,11 @@
 export type FocusableElement = HTMLElement | SVGElement | MathMLElement;
 
-export type SpavDirection = 'left' | 'right' | 'up' | 'down';
-
-export interface SpavOrigin {
+export interface Origin {
 	element?: Element;
 	rect: DOMRect;
 }
+
+export type SpavDirection = 'left' | 'right' | 'up' | 'down';
 
 export interface SpavScrollOptions {
 	amount?: number;

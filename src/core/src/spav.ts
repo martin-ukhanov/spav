@@ -9,8 +9,8 @@ import {
 
 import type {
 	FocusableElement,
+	Origin,
 	SpavDirection,
-	SpavOrigin,
 	SpavScrollOptions,
 	SpavScrollCallback,
 	SpavScrollIntoViewCallback,
@@ -280,7 +280,7 @@ export class Spav {
 	 * @param rect - An optional bounding rectangle to use as a fallback origin.
 	 * @returns The origin element (if identified) and its bounding rectangle.
 	 */
-	#getOrigin(rect?: DOMRect): SpavOrigin {
+	#getOrigin(rect?: DOMRect): Origin {
 		const active = document.activeElement;
 
 		if (active && active !== document.body) {
@@ -329,7 +329,7 @@ export class Spav {
 	 * @param direction - The intended direction of navigation.
 	 * @returns The best candidate element to navigate to, or `undefined` if none are suitable.
 	 */
-	#selectBestCandidate(origin: SpavOrigin, candidates: Element[], direction: SpavDirection) {
+	#selectBestCandidate(origin: Origin, candidates: Element[], direction: SpavDirection) {
 		let bestInternal: Element | undefined;
 		let bestInternalDistance = Infinity;
 
@@ -386,7 +386,7 @@ export class Spav {
 	}
 
 	#selectBestVisible(
-		origin: SpavOrigin,
+		origin: Origin,
 		candidates: Element[],
 		direction: SpavDirection,
 		viewportWidth: number,
