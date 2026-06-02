@@ -1,0 +1,59 @@
+{
+	"name": "spav-js",
+	"description": "Spatial navigation for the web.",
+	"keywords": [
+		"spav",
+		"spavjs",
+		"spav.js",
+		"spav-js",
+		"spatial",
+		"navigation",
+		"keyboard",
+		"focus",
+		"accessibility"
+	],
+	"version": "0.0.1",
+	"author": "martin-ukhanov",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/martin-ukhanov/spav.git"
+	},
+	"type": "module",
+	"files": [
+		"dist"
+	],
+	"main": "./dist/index.mjs",
+	"types": "./dist/index.d.mts",
+	"exports": {
+		".": {
+			"import": "./dist/index.mjs",
+			"types": "./dist/index.d.mts"
+		}
+	},
+	"scripts": {
+		"dev:playground:core": "pnpm --filter core dev",
+		"build": "tsdown",
+		"prepublishOnly": "pnpm run build",
+		"format": "prettier --write .",
+		"lint": "prettier --check . && eslint ."
+	},
+	"devEngines": {
+		"packageManager": {
+			"name": "pnpm",
+			"version": "11.1.1",
+			"onFail": "download"
+		}
+	},
+	"devDependencies": {
+		"@eslint/compat": "^2.1.0",
+		"@eslint/js": "^10.0.1",
+		"eslint": "^10.4.0",
+		"eslint-config-prettier": "^10.1.8",
+		"globals": "^17.6.0",
+		"prettier": "^3.8.3",
+		"tsdown": "^0.22.1",
+		"typescript": "^6.0.3",
+		"typescript-eslint": "^8.60.0"
+	}
+}

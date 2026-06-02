@@ -1,0 +1,642 @@
+import {
+	isScrollContainer,
+	canScroll,
+	isFocusableElement,
+	isInDirection,
+	getEdgeDistance,
+	getWeightedDistance
+} from './utils';
+
+import type {
+	FocusableElement,
+	SpavDirection,
+	SpavOrigin,
+	SpavScrollOptions,
+	SpavScrollCallback,
+	SpavScrollIntoViewCallback,
+	SpavFocusCallback,
+	SpavFocusEvent,
+	SpavOptions
+} from './types';
+
+export class Spav {
+	#scrollContainers: Map<Element, boolean>;
+	#rects: Map<Element, DOMRect>;
+
+	#originRect?: DOMRect;
+	#currentScrollContainer?: Element;
+
+	focusVisible?: boolean;
+	scroll?: boolean | SpavScrollOptions | SpavScrollCallback;
+	scrollIntoView?: boolean | ScrollIntoViewOptions | SpavScrollIntoViewCallback;
+	onFocus?: SpavFocusCallback;
+
+	constructor({ focusVisible, scroll, scrollIntoView, onFocus }: SpavOptions = {}) {
+		this.#scrollContainers = new Map();
+		this.#rects = new Map();
+
+		this.focusVisible = focusVisible;
+		this.scroll = scroll;
+		this.scrollIntoView = scrollIntoView;
+		this.onFocus = onFocus;
+
+		window.addEventListener('keydown', this.#onKeyDown);
+		window.addEventListener('focusout', this.#onFocusOut);
+		document.addEventListener('mouseup', this.#onMouseUp);
+	}
+
+	#onKeyDown = (e: KeyboardEvent) => {
+		let direction: SpavDirection | undefined;
+
+		switch (e.key) {
+			case 'ArrowUp':
+				direction = 'up';
+				break;
+			case 'ArrowDown':
+				direction = 'down';
+				break;
+			case 'ArrowLeft':
+				direction = 'left';
+				break;
+			case 'ArrowRight':
+				direction = 'right';
+				break;
+			case 'Escape': {
+				const active = document.activeElement;
+				if (active && isFocusableElement(active)) active.blur();
+				return;
+			}
+		}
+
+		if (direction) {
+			e.preventDefault();
+			this.navigate(direction);
+		}
+	};
+
+	#onFocusOut = (e: FocusEvent) => {
+		if (e.relatedTarget || !(e.target instanceof Element)) return;
+		this.#originRect = e.target.getBoundingClientRect();
+	};
+
+	#onMouseUp = (e: MouseEvent) => {
+		this.#originRect = new DOMRect(e.clientX, e.clientY);
+		this.#currentScrollContainer = undefined;
+	};
+
+	#isScrollContainer(element: Element) {
+		let value = this.#scrollContainers.get(element);
+
+		if (value === undefined) {
+			value = isScrollContainer(element);
+			this.#scrollContainers.set(element, value);
+		}
+
+		return value;
+	}
+
+	/**
+	 * Finds the closest ancestral scroll container of an element.
+	 *
+	 * @param element - The element to start searching from.
+	 * @returns The closest scroll container element, or the document element if none is found.
+	 */
+	#getScrollContainer(element: Element) {
+		for (
+			let current = element.parentElement;
+			current && current !== document.documentElement;
+			current = current.parentElement
+		) {
+			if (this.#isScrollContainer(current)) return current;
+		}
+
+		return document.documentElement;
+	}
+
+	/**
+	 * Determines if an element is a spatial navigation container.
+	 *
+	 * @param element - The element to check.
+	 * @returns `true` if the element is a spatial navigation container, `false` otherwise.
+	 */
+	#isContainer(element: Element) {
+		return (
+			element === document.documentElement ||
+			element.hasAttribute('data-spav-contain') ||
+			this.#isScrollContainer(element)
+		);
+	}
+
+	/**
+	 * Finds the closest ancestral spatial navigation container of an element.
+	 *
+	 * @param element - The element to start searching from.
+	 * @returns The closest spatial navigation container element, or the document element if none is found.
+	 */
+	#getContainer(element: Element) {
+		for (let current = element.parentElement; current; current = current.parentElement) {
+			if (this.#isContainer(current)) return current;
+		}
+
+		return document.documentElement;
+	}
+
+	#getRect(element: Element) {
+		let rect = this.#rects.get(element);
+
+		if (!rect) {
+			rect = element.getBoundingClientRect();
+			this.#rects.set(element, rect);
+		}
+
+		return rect;
+	}
+
+	/**
+	 * Determines if an element can actively receive focus.
+	 *
+	 * @param element - The element to check.
+	 * @returns `true` if the element is focusable, `false` otherwise.
+	 */
+	#isFocusable(element: Element): element is FocusableElement {
+		if (
+			element === document.documentElement ||
+			element === document.body ||
+			!element.isConnected ||
+			!isFocusableElement(element) ||
+			element.hasAttribute('data-spav-ignore')
+		) {
+			return false;
+		}
+
+		if (element.tabIndex < 0 && !(element instanceof HTMLElement && element.isContentEditable)) {
+			return false;
+		}
+
+		switch (element.tagName) {
+			case 'A':
+			case 'AREA':
+				if (!element.hasAttribute('href')) return false;
+				break;
+
+			case 'AUDIO':
+			case 'VIDEO':
+				if (!element.hasAttribute('controls')) return false;
+				break;
+		}
+
+		if (element.matches(':disabled') || element.closest('[inert]')) {
+			return false;
+		}
+
+		if (
+			!element.checkVisibility({
+				contentVisibilityAuto: true,
+				visibilityProperty: true,
+				opacityProperty: true
+			})
+		) {
+			return false;
+		}
+
+		const { width, height } = this.#getRect(element);
+		if (width <= 0 || height <= 0) return false;
+
+		return true;
+	}
+
+	/**
+	 * Computes the portion of an element's rect that lies within the viewport.
+	 *
+	 * @param element - The element to measure.
+	 * @param viewportWidth - The width of the viewport.
+	 * @param viewportHeight - The height of the viewport.
+	 * @returns The clipped visible rectangle, or `undefined` if the element does not intersect the viewport.
+	 */
+	#getVisibleRect(element: Element, viewportWidth: number, viewportHeight: number) {
+		const rect = this.#getRect(element);
+
+		const left = Math.max(0, rect.left);
+		const right = Math.min(viewportWidth, rect.right);
+		const top = Math.max(0, rect.top);
+		const bottom = Math.min(viewportHeight, rect.bottom);
+
+		if (right - left <= 0 || bottom - top <= 0) return undefined;
+
+		return new DOMRect(left, top, right - left, bottom - top);
+	}
+
+	/**
+	 * Checks if an element intersects the viewport.
+	 *
+	 * @param element - The element to check.
+	 * @param viewportWidth - The width of the viewport.
+	 * @param viewportHeight - The height of the viewport.
+	 * @returns `true` if the element intersects the viewport, `false` otherwise.
+	 */
+	#intersectsViewport(element: Element, viewportWidth: number, viewportHeight: number) {
+		return this.#getVisibleRect(element, viewportWidth, viewportHeight) !== undefined;
+	}
+
+	/**
+	 * Checks if an element intersects the viewport and is not fully occluded by other elements.
+	 *
+	 * @param element - The element to check.
+	 * @param viewportWidth - The width of the viewport.
+	 * @param viewportHeight - The height of the viewport.
+	 * @returns `true` if the element is visible, `false` otherwise.
+	 */
+	#isVisible(element: Element, viewportWidth: number, viewportHeight: number) {
+		const visible = this.#getVisibleRect(element, viewportWidth, viewportHeight);
+		if (!visible) return false;
+
+		const centerX = visible.left + visible.width / 2;
+		const centerY = visible.top + visible.height / 2;
+
+		const insetLeft = Math.min(centerX, visible.left + 1);
+		const insetRight = Math.max(centerX, visible.right - 1);
+		const insetTop = Math.min(centerY, visible.top + 1);
+		const insetBottom = Math.max(centerY, visible.bottom - 1);
+
+		const testPoints = [
+			{ x: centerX, y: centerY },
+			{ x: insetLeft, y: insetTop },
+			{ x: insetRight, y: insetTop },
+			{ x: insetLeft, y: insetBottom },
+			{ x: insetRight, y: insetBottom }
+		];
+
+		for (const { x, y } of testPoints) {
+			const topElement = document.elementFromPoint(x, y);
+			if (element.contains(topElement)) return true;
+		}
+
+		return false;
+	}
+
+	/**
+	 * Determines the current spatial navigation origin point.
+	 *
+	 * @param rect - An optional bounding rectangle to use as a fallback origin.
+	 * @returns The origin element (if identified) and its bounding rectangle.
+	 */
+	#getOrigin(rect?: DOMRect): SpavOrigin {
+		const active = document.activeElement;
+
+		if (active && active !== document.body) {
+			if (this.#isContainer(active) && rect) return { rect };
+
+			return {
+				element: active,
+				rect: this.#getRect(active)
+			};
+		}
+
+		if (rect) return { rect };
+
+		return {
+			element: document.documentElement,
+			rect: new DOMRect(0, 0, window.innerWidth, window.innerHeight)
+		};
+	}
+
+	/**
+	 * Recursively retrieves all potential focus candidates within a container.
+	 *
+	 * @param container - The root element to search within.
+	 * @returns An array of candidate elements that are either nested containers or focusable targets.
+	 */
+	#getCandidates = (container: Element) => {
+		const candidates: Element[] = [];
+
+		for (const child of container.children) {
+			if (this.#isContainer(child)) {
+				candidates.push(child);
+			} else {
+				if (this.#isFocusable(child)) candidates.push(child);
+				candidates.push(...this.#getCandidates(child));
+			}
+		}
+
+		return candidates;
+	};
+
+	/**
+	 * Evaluates a list of candidate elements and selects the most optimal target for spatial navigation.
+	 *
+	 * @param origin - An object containing the origin element (if identified) and its bounding rectangle.
+	 * @param candidates - An array of potential target elements.
+	 * @param direction - The intended direction of navigation.
+	 * @returns The best candidate element to navigate to, or `undefined` if none are suitable.
+	 */
+	#selectBestCandidate(origin: SpavOrigin, candidates: Element[], direction: SpavDirection) {
+		let bestInternal: Element | undefined;
+		let bestInternalDistance = Infinity;
+
+		let bestExternal: Element | undefined;
+		let bestExternalDistance = Infinity;
+
+		let bestWrap: Element | undefined;
+		let bestWrapDistance = Infinity;
+
+		for (const candidate of candidates) {
+			if (candidate === origin.element || candidate.contains(origin.element ?? null)) {
+				continue;
+			}
+
+			const candidateRect = this.#getRect(candidate);
+
+			if (origin.element?.contains(candidate)) {
+				const distance = getEdgeDistance(origin.rect, candidateRect, direction);
+				if (distance < bestInternalDistance) {
+					bestInternalDistance = distance;
+					bestInternal = candidate;
+				}
+				continue;
+			}
+
+			if (isInDirection(origin.rect, candidateRect, direction)) {
+				const distance = getWeightedDistance(origin.rect, candidateRect, direction);
+				if (distance < bestExternalDistance) {
+					bestExternalDistance = distance;
+					bestExternal = candidate;
+				}
+				continue;
+			}
+
+			const wrapsOrigin =
+				this.#isContainer(candidate) &&
+				!this.#isFocusable(candidate) &&
+				candidateRect.left <= origin.rect.left &&
+				candidateRect.right >= origin.rect.right &&
+				candidateRect.top <= origin.rect.top &&
+				candidateRect.bottom >= origin.rect.bottom &&
+				(!origin.element || !candidate.contains(origin.element));
+
+			if (wrapsOrigin) {
+				const distance = getWeightedDistance(origin.rect, candidateRect, direction);
+				if (distance < bestWrapDistance) {
+					bestWrapDistance = distance;
+					bestWrap = candidate;
+				}
+			}
+		}
+
+		return bestInternal ?? bestExternal ?? bestWrap;
+	}
+
+	#selectBestVisible(
+		origin: SpavOrigin,
+		candidates: Element[],
+		direction: SpavDirection,
+		viewportWidth: number,
+		viewportHeight: number
+	) {
+		const pool = [...candidates];
+
+		while (pool.length) {
+			const best = this.#selectBestCandidate(origin, pool, direction);
+
+			if (!best) return undefined;
+			if (this.#isVisible(best, viewportWidth, viewportHeight)) return best;
+
+			pool.splice(pool.indexOf(best), 1);
+		}
+
+		return undefined;
+	}
+
+	#scroll(container: Element, direction: SpavDirection) {
+		if (this.scroll === false) return;
+
+		if (typeof this.scroll === 'function') {
+			this.scroll({ container, direction });
+			return;
+		}
+
+		let amount = 40;
+		let behavior: ScrollOptions['behavior'];
+
+		if (typeof this.scroll === 'object') {
+			if (this.scroll.amount !== undefined) amount = Math.abs(this.scroll.amount);
+			behavior = this.scroll.behavior;
+		}
+
+		const offsets = {
+			up: { top: -amount },
+			down: { top: amount },
+			left: { left: -amount },
+			right: { left: amount }
+		};
+
+		container.scrollBy({ ...offsets[direction], behavior });
+	}
+
+	#scrollIntoView(target: Element) {
+		if (this.scrollIntoView === false) return;
+
+		if (typeof this.scrollIntoView === 'function') {
+			this.scrollIntoView({ target, container: this.#getScrollContainer(target) });
+			return;
+		}
+
+		const options = typeof this.scrollIntoView === 'object' ? this.scrollIntoView : {};
+
+		target.scrollIntoView({
+			behavior: 'auto',
+			block: 'nearest',
+			inline: 'nearest',
+			...options
+		});
+	}
+
+	#focus({ target, origin, direction }: SpavFocusEvent) {
+		if (!this.#isFocusable(target)) return false;
+
+		target.focus({ focusVisible: this.focusVisible, preventScroll: true });
+		this.#scrollIntoView(target);
+		this.#originRect = undefined;
+		this.#currentScrollContainer = undefined;
+		this.onFocus?.({ target, origin, direction });
+
+		return true;
+	}
+
+	/**
+	 * Attempts to focus a target element.
+	 *
+	 * @param target - The target element to focus.
+	 * @returns `true` if the target element was successfully focused, `false` otherwise.
+	 */
+	focus(target: Element) {
+		return this.#focus({ target });
+	}
+
+	/**
+	 * Performs spatial navigation in the specified direction.
+	 * Finds the best element to focus, or scrolls the nearest container if no element is immediately reachable.
+	 *
+	 * @param direction - The direction to navigate.
+	 */
+	navigate(direction: SpavDirection) {
+		this.#rects.clear();
+		this.#scrollContainers.clear();
+
+		if (this.#currentScrollContainer && !this.#currentScrollContainer.isConnected) {
+			this.#currentScrollContainer = undefined;
+		}
+
+		const origin = this.#currentScrollContainer
+			? {
+					element: this.#currentScrollContainer,
+					rect: this.#getRect(this.#currentScrollContainer)
+				}
+			: this.#getOrigin(this.#originRect);
+
+		const originEl = origin.element ?? document.elementFromPoint(origin.rect.x, origin.rect.y);
+		let container: Element | undefined;
+
+		if (originEl) {
+			container = this.#isContainer(originEl) ? originEl : this.#getContainer(originEl);
+		} else {
+			container = document.documentElement;
+		}
+
+		const viewportWidth = document.documentElement.clientWidth;
+		const viewportHeight = document.documentElement.clientHeight;
+
+		while (container) {
+			const candidates = this.#getCandidates(container);
+			const visibleCandidates = candidates.filter(
+				(candidate) =>
+					candidate !== origin.element &&
+					this.#intersectsViewport(candidate, viewportWidth, viewportHeight)
+			);
+
+			if (visibleCandidates.length) {
+				let best = this.#selectBestVisible(
+					origin,
+					visibleCandidates,
+					direction,
+					viewportWidth,
+					viewportHeight
+				);
+
+				while (best && !this.#isFocusable(best) && this.#isContainer(best)) {
+					const innerCandidates = this.#getCandidates(best);
+					const visibleInner = innerCandidates.filter(
+						(candidate) =>
+							candidate !== origin.element &&
+							this.#intersectsViewport(candidate, viewportWidth, viewportHeight)
+					);
+
+					const next = this.#selectBestVisible(
+						origin,
+						visibleInner,
+						direction,
+						viewportWidth,
+						viewportHeight
+					);
+
+					// Scroll container entered with no visible targets inside
+					if (!next && this.#isScrollContainer(best)) {
+						const active = document.activeElement;
+
+						// Blur active element if outside scroll container
+						if (active && active !== document.body && !best.contains(active)) {
+							if (isFocusableElement(active)) active.blur();
+							this.#originRect = undefined;
+						}
+
+						this.#currentScrollContainer = best;
+						this.#scrollIntoView(best);
+						return;
+					}
+
+					best = next;
+				}
+
+				// Skip candidate clipped at the trailing edge while scrolling
+				if (best && this.#currentScrollContainer) {
+					const containerRect =
+						this.#currentScrollContainer === document.documentElement
+							? new DOMRect(0, 0, viewportWidth, viewportHeight)
+							: this.#getRect(this.#currentScrollContainer);
+
+					const bestRect = this.#getRect(best);
+
+					const scrollsBackward =
+						(direction === 'down' && bestRect.top < containerRect.top) ||
+						(direction === 'up' && bestRect.bottom > containerRect.bottom) ||
+						(direction === 'left' && bestRect.right > containerRect.right) ||
+						(direction === 'right' && bestRect.left < containerRect.left);
+
+					if (scrollsBackward) best = undefined;
+				}
+
+				if (
+					best &&
+					this.#focus({
+						target: best,
+						origin: origin.element,
+						direction
+					})
+				) {
+					return;
+				}
+			}
+
+			if (this.scroll !== false) {
+				const isContainerScroll = this.#isScrollContainer(container);
+				const scrollContainer = isContainerScroll ? container : this.#getScrollContainer(container);
+
+				const hasUnreachedCandidates = candidates.some(
+					(candidate) =>
+						candidate !== origin.element &&
+						isInDirection(origin.rect, this.#getRect(candidate), direction)
+				);
+
+				if (
+					(hasUnreachedCandidates || isContainerScroll) &&
+					canScroll(scrollContainer, direction)
+				) {
+					this.#scroll(scrollContainer, direction);
+
+					const active = document.activeElement;
+					if (active) this.#rects.delete(active); // Active element rect stale after scroll
+
+					// Blur active element if scrolled out of view
+					if (
+						active &&
+						active !== document.body &&
+						isFocusableElement(active) &&
+						!this.#isVisible(active, viewportWidth, viewportHeight)
+					) {
+						active.blur();
+						this.#originRect = undefined;
+						this.#currentScrollContainer = scrollContainer;
+					}
+
+					return;
+				}
+			}
+
+			const parent = this.#getContainer(container);
+			container = parent === container ? undefined : parent;
+		}
+	}
+
+	/**
+	 * Cleans up the instance and removes all event listeners.
+	 */
+	destroy() {
+		this.#rects.clear();
+		this.#scrollContainers.clear();
+		this.#originRect = undefined;
+		this.#currentScrollContainer = undefined;
+
+		window.removeEventListener('keydown', this.#onKeyDown);
+		window.removeEventListener('focusout', this.#onFocusOut);
+		document.removeEventListener('mouseup', this.#onMouseUp);
+	}
+}
