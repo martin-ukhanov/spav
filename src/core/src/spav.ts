@@ -2,6 +2,7 @@ import {
 	isScrollContainer,
 	canScroll,
 	isFocusableElement,
+	isCaretAtEdge,
 	isInDirection,
 	getEdgeDistance,
 	getWeightedDistance
@@ -69,6 +70,11 @@ export class Spav {
 		}
 
 		if (direction) {
+			if (e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+
+			const active = document.activeElement;
+			if (active && !isCaretAtEdge(active, direction)) return;
+
 			e.preventDefault();
 			this.navigate(direction);
 		}

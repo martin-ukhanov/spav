@@ -60,6 +60,44 @@ export function isFocusableElement(element: Element): element is FocusableElemen
 }
 
 /**
+ * Determines whether an arrow key should escape an element to spatial navigation.
+ * Non-editable elements always escape; editable ones escape only when the caret is
+ * collapsed at the relevant edge.
+ *
+ * @param element - The element to inspect.
+ * @param direction - The direction of navigation.
+ * @returns `true` if navigation should proceed, `false` if the element keeps the key.
+ */
+export function isCaretAtEdge(element: Element, direction: SpavDirection) {
+	if (
+		!(element instanceof HTMLTextAreaElement) &&
+		!(
+			element instanceof HTMLInputElement &&
+			['text', 'search', 'url', 'tel', 'password', 'email'].includes(element.type)
+		)
+	) {
+		return true;
+	}
+
+	const atStart = direction === 'left' || direction === 'up';
+
+	let selectionStart: number | null;
+	let selectionEnd: number | null;
+
+	try {
+		selectionStart = element.selectionStart;
+		selectionEnd = element.selectionEnd;
+	} catch {
+		return true;
+	}
+
+	if (selectionStart === null || selectionEnd === null) return true;
+	if (selectionStart !== selectionEnd) return false;
+
+	return atStart ? selectionStart === 0 : selectionEnd === element.value.length;
+}
+
+/**
  * Checks if a target rectangle is located in a specific direction relative to an origin rectangle.
  *
  * @param originRect - The bounding rectangle of the origin element.
