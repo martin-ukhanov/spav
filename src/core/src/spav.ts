@@ -29,14 +29,12 @@ export class Spav {
 	#origin?: Origin;
 	#currentScrollContainer?: Element;
 
-	focusVisible: boolean;
 	blurOnEscape: boolean;
 	scroll: boolean | SpavScrollOptions | SpavScrollCallback;
 	scrollIntoView: boolean | SpavScrollIntoViewOptions | SpavScrollIntoViewCallback;
 	onFocus?: SpavFocusCallback;
 
 	constructor({
-		focusVisible = true,
 		blurOnEscape = true,
 		scroll = true,
 		scrollIntoView = true,
@@ -45,7 +43,6 @@ export class Spav {
 		this.#scrollContainers = new Map();
 		this.#rects = new Map();
 
-		this.focusVisible = focusVisible;
 		this.blurOnEscape = blurOnEscape;
 		this.scroll = scroll;
 		this.scrollIntoView = scrollIntoView;
@@ -537,7 +534,7 @@ export class Spav {
 	#focus({ target, origin, direction }: SpavFocusEvent) {
 		if (!this.#isFocusable(target)) return false;
 
-		target.focus({ focusVisible: this.focusVisible, preventScroll: true });
+		target.focus({ focusVisible: true, preventScroll: true });
 		this.#scrollIntoView(target);
 		this.#origin = undefined;
 		this.#currentScrollContainer = undefined;

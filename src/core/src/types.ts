@@ -110,13 +110,6 @@ export type SpavFocusCallback = (event: SpavFocusEvent) => void;
 
 export interface SpavOptions {
 	/**
-	 * Whether to provide visible indication that the element is focused.
-	 *
-	 * @default true
-	 */
-	focusVisible?: boolean;
-
-	/**
 	 * Whether to blur the active element upon pressing the Escape key.
 	 *
 	 * @default true
