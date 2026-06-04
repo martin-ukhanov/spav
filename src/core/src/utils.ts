@@ -79,6 +79,8 @@ export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 		return true;
 	}
 
+	if (element.readOnly || element.disabled) return true;
+
 	const atStart = direction === 'left' || direction === 'up';
 
 	let selectionStart: number | null;
