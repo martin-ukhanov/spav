@@ -94,7 +94,7 @@ export interface SpavOptions {
 
 	/**
 	 * Configures how newly focused elements are scrolled into the viewport.
-	 * Accepts `true` to enable native default behavior, `false` to disable, an options object
+	 * Accepts `true` to enable default behavior, `false` to disable, an options object
 	 * to customize, or a callback for custom logic.
 	 *
 	 * @default true
