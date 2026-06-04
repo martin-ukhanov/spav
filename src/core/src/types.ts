@@ -1,10 +1,19 @@
+/**
+ * An element that can receive focus.
+ */
 export type FocusableElement = HTMLElement | SVGElement | MathMLElement;
 
+/**
+ * The starting point of a spatial navigation movement.
+ */
 export interface Origin {
 	element?: Element;
 	rect: DOMRect;
 }
 
+/**
+ * A spatial navigation direction.
+ */
 export type SpavDirection = 'left' | 'right' | 'up' | 'down';
 
 export interface SpavScrollOptions {
@@ -35,6 +44,9 @@ export interface SpavScrollEvent {
 	direction: SpavDirection;
 }
 
+/**
+ * Callback function to execute custom scroll logic.
+ */
 export type SpavScrollCallback = (event: SpavScrollEvent) => void;
 
 export interface SpavScrollIntoViewOptions {
@@ -72,6 +84,9 @@ export interface SpavScrollIntoViewEvent {
 	container: Element;
 }
 
+/**
+ * Callback function to execute custom scroll-into-view logic.
+ */
 export type SpavScrollIntoViewCallback = (event: SpavScrollIntoViewEvent) => void;
 
 export interface SpavFocusEvent {
