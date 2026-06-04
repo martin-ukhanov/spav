@@ -134,47 +134,47 @@ export function getVisibleRect(rect: DOMRect, bounds: DOMRect) {
 /**
  * Checks if a target rectangle is located in a specific direction relative to an origin rectangle.
  *
- * @param originRect - The bounding rectangle of the origin element.
- * @param targetRect - The bounding rectangle of the target element.
+ * @param origin - The bounding rectangle of the origin.
+ * @param target - The bounding rectangle of the target.
  * @param direction - The direction to evaluate.
  * @returns `true` if the target is in the specified direction relative to the origin, `false` otherwise.
  */
-export function isInDirection(originRect: DOMRect, targetRect: DOMRect, direction: SpavDirection) {
+export function isInDirection(origin: DOMRect, target: DOMRect, direction: SpavDirection) {
 	switch (direction) {
 		case 'left':
 			return (
-				originRect.left >= targetRect.right ||
-				(originRect.left >= targetRect.left &&
-					originRect.right > targetRect.right &&
-					originRect.bottom > targetRect.top &&
-					originRect.top < targetRect.bottom)
+				origin.left >= target.right ||
+				(origin.left >= target.left &&
+					origin.right > target.right &&
+					origin.bottom > target.top &&
+					origin.top < target.bottom)
 			);
 
 		case 'right':
 			return (
-				targetRect.left >= originRect.right ||
-				(targetRect.left >= originRect.left &&
-					targetRect.right > originRect.right &&
-					targetRect.bottom > originRect.top &&
-					targetRect.top < originRect.bottom)
+				target.left >= origin.right ||
+				(target.left >= origin.left &&
+					target.right > origin.right &&
+					target.bottom > origin.top &&
+					target.top < origin.bottom)
 			);
 
 		case 'up':
 			return (
-				originRect.top >= targetRect.bottom ||
-				(originRect.top >= targetRect.top &&
-					originRect.bottom > targetRect.bottom &&
-					originRect.left < targetRect.right &&
-					originRect.right > targetRect.left)
+				origin.top >= target.bottom ||
+				(origin.top >= target.top &&
+					origin.bottom > target.bottom &&
+					origin.left < target.right &&
+					origin.right > target.left)
 			);
 
 		case 'down':
 			return (
-				targetRect.top >= originRect.bottom ||
-				(targetRect.top >= originRect.top &&
-					targetRect.bottom > originRect.bottom &&
-					targetRect.left < originRect.right &&
-					targetRect.right > originRect.left)
+				target.top >= origin.bottom ||
+				(target.top >= origin.top &&
+					target.bottom > origin.bottom &&
+					target.left < origin.right &&
+					target.right > origin.left)
 			);
 	}
 }
@@ -182,57 +182,49 @@ export function isInDirection(originRect: DOMRect, targetRect: DOMRect, directio
 /**
  * Calculates the physical edge-to-edge distance between two rectangles in a given direction.
  *
- * @param originRect - The bounding rectangle of the origin.
- * @param targetRect - The bounding rectangle of the target.
+ * @param origin - The bounding rectangle of the origin.
+ * @param target - The bounding rectangle of the target.
  * @param direction - The direction to measure.
  * @returns The calculated edge distance in pixels.
  */
-export function getEdgeDistance(
-	originRect: DOMRect,
-	targetRect: DOMRect,
-	direction: SpavDirection
-) {
+export function getEdgeDistance(origin: DOMRect, target: DOMRect, direction: SpavDirection) {
 	switch (direction) {
 		case 'left':
-			return Math.abs(originRect.right - targetRect.right);
+			return Math.abs(origin.right - target.right);
 		case 'right':
-			return Math.abs(originRect.left - targetRect.left);
+			return Math.abs(origin.left - target.left);
 		case 'up':
-			return Math.abs(originRect.bottom - targetRect.bottom);
+			return Math.abs(origin.bottom - target.bottom);
 		case 'down':
-			return Math.abs(originRect.top - targetRect.top);
+			return Math.abs(origin.top - target.top);
 	}
 }
 
 /**
  * Calculates a weighted heuristic distance between two rectangles.
  *
- * @param originRect - The bounding rectangle of the origin.
- * @param targetRect - The bounding rectangle of the target.
+ * @param origin - The bounding rectangle of the origin.
+ * @param target - The bounding rectangle of the target.
  * @param direction - The direction to evaluate.
  * @returns A weighted distance value.
  */
-export function getWeightedDistance(
-	originRect: DOMRect,
-	targetRect: DOMRect,
-	direction: SpavDirection
-) {
-	const fromWidth = Math.max(originRect.width, 1);
-	const fromHeight = Math.max(originRect.height, 1);
+export function getWeightedDistance(origin: DOMRect, target: DOMRect, direction: SpavDirection) {
+	const fromWidth = Math.max(origin.width, 1);
+	const fromHeight = Math.max(origin.height, 1);
 
-	const gapX = Math.max(0, originRect.left - targetRect.right, targetRect.left - originRect.right);
-	const gapY = Math.max(0, originRect.top - targetRect.bottom, targetRect.top - originRect.bottom);
+	const gapX = Math.max(0, origin.left - target.right, target.left - origin.right);
+	const gapY = Math.max(0, origin.top - target.bottom, target.top - origin.bottom);
 
 	const euclideanDistance = Math.hypot(gapX, gapY);
 
 	const overlapX = Math.max(
 		0,
-		Math.min(originRect.right, targetRect.right) - Math.max(originRect.left, targetRect.left)
+		Math.min(origin.right, target.right) - Math.max(origin.left, target.left)
 	);
 
 	const overlapY = Math.max(
 		0,
-		Math.min(originRect.bottom, targetRect.bottom) - Math.max(originRect.top, targetRect.top)
+		Math.min(origin.bottom, target.bottom) - Math.max(origin.top, target.top)
 	);
 
 	const overlapArea = overlapX * overlapY;
