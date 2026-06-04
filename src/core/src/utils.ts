@@ -98,7 +98,7 @@ export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 }
 
 /**
- * Checks if a rectangle intersects the given bounds.
+ * Determines if a rectangle intersects the given bounds.
  *
  * @param rect - The rectangle to test.
  * @param bounds - The rectangle to test against.
@@ -131,7 +131,7 @@ export function getVisibleRect(rect: DOMRect, bounds: DOMRect) {
 }
 
 /**
- * Checks if a target rectangle is located in a direction relative to an origin rectangle.
+ * Determines if a target rectangle is located in a given direction relative to an origin rectangle.
  *
  * @param origin - The origin rectagle.
  * @param target - The target rectangle.
@@ -179,7 +179,7 @@ export function isInDirection(origin: DOMRect, target: DOMRect, direction: SpavD
 }
 
 /**
- * Calculates the edge-to-edge distance between two rectangles in a direction.
+ * Calculates the edge-to-edge distance between two rectangles in a given direction.
  *
  * @param origin - The origin rectagle.
  * @param target - The target rectangle.
@@ -200,12 +200,12 @@ export function getEdgeDistance(origin: DOMRect, target: DOMRect, direction: Spa
 }
 
 /**
- * Calculates a weighted heuristic distance between two rectangles.
+ * Calculates a weighted heuristic distance between two rectangles in a given direction.
  *
  * @param origin - The origin rectagle.
  * @param target - The target rectangle.
  * @param direction - The direction to evaluate.
- * @returns The calculated weighted distance value.
+ * @returns A calculated weighted distance value.
  */
 export function getWeightedDistance(origin: DOMRect, target: DOMRect, direction: SpavDirection) {
 	const fromWidth = Math.max(origin.width, 1);
