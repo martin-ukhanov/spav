@@ -86,7 +86,7 @@ export interface SpavFocusEvent {
 	origin?: Element;
 
 	/**
-	 * The direction navigation moved in, if any.
+	 * The direction navigation moved, if any.
 	 */
 	direction?: SpavDirection;
 }
