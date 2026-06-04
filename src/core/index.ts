@@ -4,6 +4,7 @@ export type {
 	SpavScrollOptions,
 	SpavScrollEvent,
 	SpavScrollCallback,
+	SpavScrollIntoViewOptions,
 	SpavScrollIntoViewEvent,
 	SpavScrollIntoViewCallback,
 	SpavFocusEvent,

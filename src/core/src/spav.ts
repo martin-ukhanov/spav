@@ -16,6 +16,7 @@ import type {
 	SpavDirection,
 	SpavScrollOptions,
 	SpavScrollCallback,
+	SpavScrollIntoViewOptions,
 	SpavScrollIntoViewCallback,
 	SpavFocusCallback,
 	SpavFocusEvent,
@@ -28,16 +29,24 @@ export class Spav {
 	#origin?: Origin;
 	#currentScrollContainer?: Element;
 
-	focusVisible?: boolean;
-	scroll?: boolean | SpavScrollOptions | SpavScrollCallback;
-	scrollIntoView?: boolean | ScrollIntoViewOptions | SpavScrollIntoViewCallback;
+	focusVisible: boolean;
+	blurOnEscape: boolean;
+	scroll: boolean | SpavScrollOptions | SpavScrollCallback;
+	scrollIntoView: boolean | SpavScrollIntoViewOptions | SpavScrollIntoViewCallback;
 	onFocus?: SpavFocusCallback;
 
-	constructor({ focusVisible, scroll, scrollIntoView, onFocus }: SpavOptions = {}) {
+	constructor({
+		focusVisible = true,
+		blurOnEscape = true,
+		scroll = true,
+		scrollIntoView = true,
+		onFocus
+	}: SpavOptions = {}) {
 		this.#scrollContainers = new Map();
 		this.#rects = new Map();
 
 		this.focusVisible = focusVisible;
+		this.blurOnEscape = blurOnEscape;
 		this.scroll = scroll;
 		this.scrollIntoView = scrollIntoView;
 		this.onFocus = onFocus;
@@ -49,8 +58,11 @@ export class Spav {
 
 	#onKeyDown = (e: KeyboardEvent) => {
 		if (e.key === 'Escape') {
-			const focused = this.#getFocused();
-			if (focused && isFocusableElement(focused)) focused.blur();
+			if (this.blurOnEscape) {
+				const focused = this.#getFocused();
+				if (focused && isFocusableElement(focused)) focused.blur();
+			}
+
 			return;
 		}
 
@@ -464,7 +476,7 @@ export class Spav {
 	 * @param direction - The direction to scroll.
 	 */
 	#scroll(container: Element, direction: SpavDirection) {
-		if (this.scroll === false) return;
+		if (!this.scroll) return;
 
 		if (typeof this.scroll === 'function') {
 			this.scroll({ container, direction });
@@ -472,11 +484,11 @@ export class Spav {
 		}
 
 		let amount = 40;
-		let behavior: ScrollOptions['behavior'];
+		let behavior: ScrollBehavior = 'auto';
 
 		if (typeof this.scroll === 'object') {
 			if (this.scroll.amount !== undefined) amount = Math.abs(this.scroll.amount);
-			behavior = this.scroll.behavior;
+			if (this.scroll.behavior) behavior = this.scroll.behavior;
 		}
 
 		const offsets = {
@@ -499,7 +511,7 @@ export class Spav {
 	 * @param target - The target element to scroll into view.
 	 */
 	#scrollIntoView(target: Element) {
-		if (this.scrollIntoView === false) return;
+		if (!this.scrollIntoView) return;
 
 		if (typeof this.scrollIntoView === 'function') {
 			this.scrollIntoView({ target, container: this.#getScrollContainer(target) });
@@ -639,7 +651,7 @@ export class Spav {
 				}
 			}
 
-			if (this.scroll !== false) {
+			if (this.scroll) {
 				const isContainerScroll = this.#isScrollContainer(container);
 				const scrollContainer = isContainerScroll ? container : this.#getScrollContainer(container);
 
