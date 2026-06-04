@@ -24,7 +24,14 @@ export interface SpavScrollOptions {
 }
 
 export interface SpavScrollEvent {
+	/**
+	 * The container element to be scrolled.
+	 */
 	container: Element;
+
+	/**
+	 * The direction to scroll the container element.
+	 */
 	direction: SpavDirection;
 }
 
@@ -32,14 +39,14 @@ export type SpavScrollCallback = (event: SpavScrollEvent) => void;
 
 export interface SpavScrollIntoViewOptions {
 	/**
-	 * Defines the horizontal alignment of the element within the scrollable ancestor container.
+	 * Defines the horizontal alignment of the element within its scrollable container.
 	 *
 	 * @default 'nearest'
 	 */
 	inline?: ScrollLogicalPosition;
 
 	/**
-	 * Defines the vertical alignment of the element within the scrollable ancestor container.
+	 * Defines the vertical alignment of the element within its scrollable container.
 	 *
 	 * @default 'nearest'
 	 */
@@ -54,15 +61,33 @@ export interface SpavScrollIntoViewOptions {
 }
 
 export interface SpavScrollIntoViewEvent {
+	/**
+	 * The target element to be scrolled into view.
+	 */
 	target: Element;
+
+	/**
+	 * The scrollable container of the target element.
+	 */
 	container: Element;
 }
 
 export type SpavScrollIntoViewCallback = (event: SpavScrollIntoViewEvent) => void;
 
 export interface SpavFocusEvent {
+	/**
+	 * The target element that was focused.
+	 */
 	target: Element;
+
+	/**
+	 * The origin element navigation started from, if any.
+	 */
 	origin?: Element;
+
+	/**
+	 * The direction navigation moved in, if any.
+	 */
 	direction?: SpavDirection;
 }
 
