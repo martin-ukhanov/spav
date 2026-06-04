@@ -98,6 +98,40 @@ export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 }
 
 /**
+ * Checks if a rectangle intersects the given bounds.
+ *
+ * @param rect - The rectangle to test.
+ * @param bounds - The rectangle to test against.
+ * @returns `true` if the rectangle intersects the bounds, `false` otherwise.
+ */
+export function intersects(rect: DOMRect, bounds: DOMRect) {
+	return (
+		rect.left < bounds.right &&
+		rect.right > bounds.left &&
+		rect.top < bounds.bottom &&
+		rect.bottom > bounds.top
+	);
+}
+
+/**
+ * Computes the portion of a rectangle that lies within the given bounds.
+ *
+ * @param rect - The rectangle to clip.
+ * @param bounds - The rectangle to clip against.
+ * @returns The clipped rectangle, or `undefined` if the rectangle lies outside the bounds.
+ */
+export function getVisibleRect(rect: DOMRect, bounds: DOMRect) {
+	const left = Math.max(bounds.left, rect.left);
+	const right = Math.min(bounds.right, rect.right);
+	const top = Math.max(bounds.top, rect.top);
+	const bottom = Math.min(bounds.bottom, rect.bottom);
+
+	if (right - left <= 0 || bottom - top <= 0) return undefined;
+
+	return new DOMRect(left, top, right - left, bottom - top);
+}
+
+/**
  * Checks if a target rectangle is located in a specific direction relative to an origin rectangle.
  *
  * @param originRect - The bounding rectangle of the origin element.

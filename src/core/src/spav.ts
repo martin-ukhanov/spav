@@ -3,6 +3,8 @@ import {
 	canScroll,
 	isFocusableElement,
 	isCaretAtEdge,
+	intersects,
+	getVisibleRect,
 	isInDirection,
 	getEdgeDistance,
 	getWeightedDistance
@@ -275,37 +277,6 @@ export class Spav {
 	}
 
 	/**
-	 * Computes the portion of an element's rect that lies within the given bounds.
-	 *
-	 * @param element - The element to measure.
-	 * @param bounds - The rectangle to clip against.
-	 * @returns The clipped rectangle, or `undefined` if the element lies outside the bounds.
-	 */
-	#getVisibleRect(element: Element, bounds: DOMRect) {
-		const rect = this.#getRect(element);
-
-		const left = Math.max(bounds.left, rect.left);
-		const right = Math.min(bounds.right, rect.right);
-		const top = Math.max(bounds.top, rect.top);
-		const bottom = Math.min(bounds.bottom, rect.bottom);
-
-		if (right - left <= 0 || bottom - top <= 0) return undefined;
-
-		return new DOMRect(left, top, right - left, bottom - top);
-	}
-
-	/**
-	 * Checks if an element intersects the given bounds.
-	 *
-	 * @param element - The element to check.
-	 * @param bounds - The rectangle to test against.
-	 * @returns `true` if the element intersects the bounds, `false` otherwise.
-	 */
-	#intersects(element: Element, bounds: DOMRect) {
-		return this.#getVisibleRect(element, bounds) !== undefined;
-	}
-
-	/**
 	 * Checks if an element intersects the given bounds and is not fully occluded by other elements.
 	 *
 	 * @param element - The element to check.
@@ -313,7 +284,7 @@ export class Spav {
 	 * @returns `true` if the element is visible, `false` otherwise.
 	 */
 	#isVisible(element: Element, bounds: DOMRect) {
-		const visible = this.#getVisibleRect(element, bounds);
+		const visible = getVisibleRect(this.#getRect(element), bounds);
 		if (!visible) return false;
 
 		const centerX = visible.left + visible.width / 2;
@@ -619,7 +590,8 @@ export class Spav {
 		while (container) {
 			const candidates = this.#getCandidates(container);
 			const visibleCandidates = candidates.filter(
-				(candidate) => candidate !== origin.element && this.#intersects(candidate, viewport)
+				(candidate) =>
+					candidate !== origin.element && intersects(this.#getRect(candidate), viewport)
 			);
 
 			if (visibleCandidates.length) {
@@ -628,7 +600,8 @@ export class Spav {
 				while (best && !this.#isFocusable(best) && this.#isContainer(best)) {
 					const innerCandidates = this.#getCandidates(best);
 					const visibleInner = innerCandidates.filter(
-						(candidate) => candidate !== origin.element && this.#intersects(candidate, viewport)
+						(candidate) =>
+							candidate !== origin.element && intersects(this.#getRect(candidate), viewport)
 					);
 
 					const next = this.#selectBestVisible(origin, visibleInner, direction, viewport);
