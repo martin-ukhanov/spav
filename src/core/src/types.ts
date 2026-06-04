@@ -124,7 +124,7 @@ export interface SpavOptions {
 	blurOnEscape?: boolean;
 
 	/**
-	 * Configures scrolling behavior when no element is reachable in the navigation direction.
+	 * Configures scroll behavior when no element is reachable in the navigation direction.
 	 * Accepts `true` to enable default behavior, `false` to disable, an options object to customize,
 	 * or a callback for custom logic.
 	 *
