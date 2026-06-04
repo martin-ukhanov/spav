@@ -48,17 +48,6 @@ export class Spav {
 	}
 
 	#onKeyDown = (e: KeyboardEvent) => {
-		if (e.key === 'Tab') {
-			const target = this.#getTabbable(!e.shiftKey);
-
-			if (target) {
-				e.preventDefault();
-				this.#focus({ target, origin: this.#getFocused() });
-			}
-
-			return;
-		}
-
 		if (e.key === 'Escape') {
 			const focused = this.#getFocused();
 			if (focused && isFocusableElement(focused)) focused.blur();
@@ -102,50 +91,6 @@ export class Spav {
 		this.#origin = { rect: new DOMRect(e.clientX, e.clientY) };
 		this.#currentScrollContainer = undefined;
 	};
-
-	/**
-	 * Creates a tree walker over the focusable elements in the document, in DOM order.
-	 *
-	 * @returns A tree walker that accepts only focusable elements.
-	 */
-	#createFocusableWalker() {
-		return document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, (node) =>
-			node instanceof Element && this.#isFocusable(node)
-				? NodeFilter.FILTER_ACCEPT
-				: NodeFilter.FILTER_SKIP
-		);
-	}
-
-	/**
-	 * Finds the focusable element nearest to a point.
-	 *
-	 * @param x - The horizontal coordinate.
-	 * @param y - The vertical coordinate.
-	 * @returns The nearest focusable element, or `undefined` if none exist.
-	 */
-	#getNearestFocusable(x: number, y: number) {
-		const walker = this.#createFocusableWalker();
-
-		let nearest: Element | undefined;
-		let nearestDistance = Infinity;
-
-		for (let node = walker.nextNode(); node; node = walker.nextNode()) {
-			const rect = (node as Element).getBoundingClientRect();
-
-			// Distance from the point to the rect (0 when the point is inside it).
-			const dx = Math.max(rect.left - x, 0, x - rect.right);
-			const dy = Math.max(rect.top - y, 0, y - rect.bottom);
-			const distance = dx * dx + dy * dy;
-
-			if (distance < nearestDistance) {
-				nearestDistance = distance;
-				nearest = node as Element;
-				if (distance === 0) break; // Point is inside this element — can't beat it.
-			}
-		}
-
-		return nearest;
-	}
 
 	#isScrollContainer(element: Element) {
 		let value = this.#scrollContainers.get(element);
@@ -344,28 +289,6 @@ export class Spav {
 	#getFocused() {
 		const active = document.activeElement;
 		return active && active !== document.body ? active : undefined;
-	}
-
-	/**
-	 * Resolves the element sequential (tab) navigation should focus next.
-	 *
-	 * @param next - `true` to move forward, `false` for backward (shift+tab).
-	 * @returns The element to focus, or `undefined` if there is none.
-	 */
-	#getTabbable(next: boolean) {
-		const focused = this.#getFocused();
-		const originEl = this.#origin?.element;
-
-		if (!focused && !originEl && this.#origin) {
-			const nearest = this.#getNearestFocusable(this.#origin.rect.x, this.#origin.rect.y);
-			if (nearest) return nearest;
-		}
-
-		const walker = this.#createFocusableWalker();
-		walker.currentNode = focused ?? (originEl?.isConnected ? originEl : document.body);
-		const tabbable = next ? walker.nextNode() : walker.previousNode();
-
-		return tabbable && tabbable instanceof Element ? tabbable : undefined;
 	}
 
 	/**
