@@ -284,8 +284,17 @@ export class Spav {
 	 * @returns `true` if the element is visible, `false` otherwise.
 	 */
 	#isVisible(element: Element, bounds: DOMRect) {
-		const visible = getVisibleRect(this.#getRect(element), bounds);
+		let visible = getVisibleRect(this.#getRect(element), bounds);
 		if (!visible) return false;
+
+		for (
+			let container = this.#getScrollContainer(element);
+			container !== document.documentElement;
+			container = this.#getScrollContainer(container)
+		) {
+			visible = getVisibleRect(visible, this.#getRect(container));
+			if (!visible) return false;
+		}
 
 		const centerX = visible.left + visible.width / 2;
 		const centerY = visible.top + visible.height / 2;
