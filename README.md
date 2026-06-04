@@ -1,3 +1,3 @@
 # Spav
 
-Spatial navigation for the web.
+Spatial navigation for the modern web.
