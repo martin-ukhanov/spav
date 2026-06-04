@@ -92,6 +92,12 @@ export class Spav {
 		this.#currentScrollContainer = undefined;
 	};
 
+	/**
+	 * Determines if an element is a scroll container and caches the result.
+	 *
+	 * @param element - The element to check.
+	 * @returns `true` if the element is a scroll container, `false` otherwise.
+	 */
 	#isScrollContainer(element: Element) {
 		let value = this.#scrollContainers.get(element);
 
@@ -107,7 +113,7 @@ export class Spav {
 	 * Finds the closest ancestral scroll container of an element.
 	 *
 	 * @param element - The element to start searching from.
-	 * @returns The closest scroll container element, or the document element if none is found.
+	 * @returns The closest scroll container, up to and including the document root.
 	 */
 	#getScrollContainer(element: Element) {
 		for (
@@ -122,7 +128,8 @@ export class Spav {
 	}
 
 	/**
-	 * Determines if an element is a spatial navigation container.
+	 * Determines if an element acts as a spatial navigation container (i.e., the document
+	 * root, a scroll container, or explicitly marked via `data-spav-contain`).
 	 *
 	 * @param element - The element to check.
 	 * @returns `true` if the element is a spatial navigation container, `false` otherwise.
@@ -138,8 +145,8 @@ export class Spav {
 	/**
 	 * Finds the closest ancestral spatial navigation container of an element.
 	 *
-	 * @param element - The element to start searching from.
-	 * @returns The closest spatial navigation container element, or the document element if none is found.
+	 * @param element - The element to check.
+	 * @returns The closest spatial navigation container, up to and including the document root.
 	 */
 	#getContainer(element: Element) {
 		for (let current = element.parentElement; current; current = current.parentElement) {
@@ -149,6 +156,13 @@ export class Spav {
 		return document.documentElement;
 	}
 
+	/**
+	 * Retrieves the bounding rectangle for an element and caches the result.
+	 * The document root specifically returns a rect based on its client dimensions.
+	 *
+	 * @param element - The element to measure.
+	 * @returns The computed bounding rectangle.
+	 */
 	#getRect(element: Element) {
 		let rect = this.#rects.get(element);
 
@@ -166,11 +180,12 @@ export class Spav {
 	}
 
 	/**
-	 * Computes the content box of an element in viewport coordinates — the region that
-	 * clips overflow, excluding its border and scrollbar.
+	 * Computes the clipping rectangle of an element in viewport coordinates.
+	 * This represents the visible client area (excluding borders and scrollbars)
+	 * where overflow content is clipped.
 	 *
 	 * @param element - The element to measure.
-	 * @returns The element's content-box rectangle.
+	 * @returns The computed clipping rectangle.
 	 */
 	#getClipRect(element: Element) {
 		const rect = this.#getRect(element);
@@ -184,7 +199,7 @@ export class Spav {
 	}
 
 	/**
-	 * Determines if an element can actively receive focus.
+	 * Determines if an element can currently receive focus.
 	 *
 	 * @param element - The element to check.
 	 * @returns `true` if the element is focusable, `false` otherwise.
@@ -237,7 +252,7 @@ export class Spav {
 	}
 
 	/**
-	 * Checks if an element intersects the given bounds and is not fully occluded by other elements.
+	 * Determines if an element intersects the given bounds and is not fully occluded by other elements.
 	 *
 	 * @param element - The element to check.
 	 * @param bounds - The rectangle to test against.
@@ -292,9 +307,9 @@ export class Spav {
 	}
 
 	/**
-	 * Determines the current spatial navigation origin point.
+	 * Determines the current spatial navigation origin.
 	 *
-	 * @param origin - An origin to fall back to when nothing is focused.
+	 * @param origin - An origin to fall back to when nothing is actively focused.
 	 * @returns The origin element (if identified) and its bounding rectangle.
 	 */
 	#getOrigin(origin?: Origin): Origin {
@@ -331,8 +346,8 @@ export class Spav {
 	/**
 	 * Recursively retrieves all potential focus candidates within a container.
 	 *
-	 * @param container - The root element to search within.
-	 * @returns An array of candidate elements that are either nested containers or focusable targets.
+	 * @param container - The root container element to search within.
+	 * @returns An array of candidate elements that are either focusable targets or nested containers.
 	 */
 	#getCandidates = (container: Element) => {
 		const candidates: Element[] = [];
@@ -352,9 +367,9 @@ export class Spav {
 	/**
 	 * Evaluates a list of candidate elements and selects the most optimal target for spatial navigation.
 	 *
-	 * @param origin - An object containing the origin element (if identified) and its bounding rectangle.
+	 * @param origin - The starting point for navigation
 	 * @param candidates - An array of potential target elements.
-	 * @param direction - The intended direction of navigation.
+	 * @param direction - The direction to navigate.
 	 * @returns The best candidate element to navigate to, or `undefined` if none are suitable.
 	 */
 	#selectBestCandidate(origin: Origin, candidates: Element[], direction: SpavDirection) {
@@ -413,6 +428,15 @@ export class Spav {
 		return bestInternal ?? bestExternal ?? bestWrap;
 	}
 
+	/**
+	 * Selects the best spatial navigation candidate that is visible within the specified bounds.
+	 *
+	 * @param origin - The starting point for navigation.
+	 * @param candidates - An array of potential target elements.
+	 * @param direction - The direction to navigate.
+	 * @param bounds - The clipping rectangle used to determine visibility.
+	 * @returns The best visible candidate, or `undefined` if none are suitable.
+	 */
 	#selectBestVisible(
 		origin: Origin,
 		candidates: Element[],
@@ -433,6 +457,14 @@ export class Spav {
 		return undefined;
 	}
 
+	/**
+	 * Scrolls a container in the specified direction based on the current configuration.
+	 * Supports disabling scroll, applying specific scroll offsets and behaviors,
+	 * or executing a custom scroll function.
+	 *
+	 * @param container - The container element to scroll.
+	 * @param direction - The direction to scroll.
+	 */
 	#scroll(container: Element, direction: SpavDirection) {
 		if (this.scroll === false) return;
 
@@ -456,9 +488,19 @@ export class Spav {
 			down: { top: amount }
 		};
 
-		container.scrollBy({ ...offsets[direction], behavior });
+		container.scrollBy({
+			...offsets[direction],
+			behavior
+		});
 	}
 
+	/**
+	 * Scrolls a target element into view based on the current configuration.
+	 * Supports disabling the action, applying specific scroll options,
+	 * or executing a custom scroll function.
+	 *
+	 * @param target - The target element to scroll into view.
+	 */
 	#scrollIntoView(target: Element) {
 		if (this.scrollIntoView === false) return;
 
@@ -477,6 +519,12 @@ export class Spav {
 		});
 	}
 
+	/**
+	 * Validates and applies focus to a target element.
+	 *
+	 * @param event - The focus event details.
+	 * @returns `true` if the target element was successfully focused, `false` otherwise.
+	 */
 	#focus({ target, origin, direction }: SpavFocusEvent) {
 		if (!this.#isFocusable(target)) return false;
 
