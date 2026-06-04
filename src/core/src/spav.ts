@@ -23,8 +23,7 @@ import type {
 export class Spav {
 	#scrollContainers: Map<Element, boolean>;
 	#rects: Map<Element, DOMRect>;
-
-	#originRect?: DOMRect;
+	#origin?: Origin;
 	#currentScrollContainer?: Element;
 
 	focusVisible?: boolean;
@@ -47,6 +46,23 @@ export class Spav {
 	}
 
 	#onKeyDown = (e: KeyboardEvent) => {
+		if (e.key === 'Tab') {
+			const target = this.#getTabbable(!e.shiftKey);
+
+			if (target) {
+				e.preventDefault();
+				this.#focus({ target, origin: this.#getFocused() });
+			}
+
+			return;
+		}
+
+		if (e.key === 'Escape') {
+			const focused = this.#getFocused();
+			if (focused && isFocusableElement(focused)) focused.blur();
+			return;
+		}
+
 		let direction: SpavDirection | undefined;
 
 		switch (e.key) {
@@ -62,11 +78,6 @@ export class Spav {
 			case 'ArrowRight':
 				direction = 'right';
 				break;
-			case 'Escape': {
-				const active = document.activeElement;
-				if (active && isFocusableElement(active)) active.blur();
-				return;
-			}
 		}
 
 		if (direction) {
@@ -82,13 +93,60 @@ export class Spav {
 
 	#onFocusOut = (e: FocusEvent) => {
 		if (e.relatedTarget || !(e.target instanceof Element)) return;
-		this.#originRect = e.target.getBoundingClientRect();
+		// Remembering the element marks this origin as "was focused", so tab steps past it.
+		this.#origin = { element: e.target, rect: e.target.getBoundingClientRect() };
 	};
 
 	#onMouseUp = (e: MouseEvent) => {
-		this.#originRect = new DOMRect(e.clientX, e.clientY);
+		// A click is a bare position (no element): arrow nav resumes from the point and
+		// tab lands on the focusable nearest to it.
+		this.#origin = { rect: new DOMRect(e.clientX, e.clientY) };
 		this.#currentScrollContainer = undefined;
 	};
+
+	/**
+	 * Creates a tree walker over the focusable elements in the document, in DOM order.
+	 *
+	 * @returns A tree walker that accepts only focusable elements.
+	 */
+	#createFocusableWalker() {
+		return document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT, (node) =>
+			node instanceof Element && this.#isFocusable(node)
+				? NodeFilter.FILTER_ACCEPT
+				: NodeFilter.FILTER_SKIP
+		);
+	}
+
+	/**
+	 * Finds the focusable element nearest to a point.
+	 *
+	 * @param x - The horizontal coordinate.
+	 * @param y - The vertical coordinate.
+	 * @returns The nearest focusable element, or `undefined` if none exist.
+	 */
+	#getNearestFocusable(x: number, y: number) {
+		const walker = this.#createFocusableWalker();
+
+		let nearest: Element | undefined;
+		let nearestDistance = Infinity;
+
+		for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+			const rect = (node as Element).getBoundingClientRect();
+
+			// Distance from the point to the rect (0 when the point is inside it).
+			const dx = Math.max(rect.left - x, 0, x - rect.right);
+			const dy = Math.max(rect.top - y, 0, y - rect.bottom);
+			const distance = dx * dx + dy * dy;
+
+			if (distance < nearestDistance) {
+				nearestDistance = distance;
+				nearest = node as Element;
+				if (distance === 0) break; // Point is inside this element — can't beat it.
+			}
+		}
+
+		return nearest;
+	}
 
 	#isScrollContainer(element: Element) {
 		let value = this.#scrollContainers.get(element);
@@ -151,7 +209,12 @@ export class Spav {
 		let rect = this.#rects.get(element);
 
 		if (!rect) {
-			rect = element.getBoundingClientRect();
+			// The document element's box spans the whole document; treat it as the
+			// viewport, which is the spatial-navigation root.
+			rect =
+				element === document.documentElement
+					? new DOMRect(0, 0, element.clientWidth, element.clientHeight)
+					: element.getBoundingClientRect();
 			this.#rects.set(element, rect);
 		}
 
@@ -212,20 +275,19 @@ export class Spav {
 	}
 
 	/**
-	 * Computes the portion of an element's rect that lies within the viewport.
+	 * Computes the portion of an element's rect that lies within the given bounds.
 	 *
 	 * @param element - The element to measure.
-	 * @param viewportWidth - The width of the viewport.
-	 * @param viewportHeight - The height of the viewport.
-	 * @returns The clipped visible rectangle, or `undefined` if the element does not intersect the viewport.
+	 * @param bounds - The rectangle to clip against.
+	 * @returns The clipped rectangle, or `undefined` if the element lies outside the bounds.
 	 */
-	#getVisibleRect(element: Element, viewportWidth: number, viewportHeight: number) {
+	#getVisibleRect(element: Element, bounds: DOMRect) {
 		const rect = this.#getRect(element);
 
-		const left = Math.max(0, rect.left);
-		const right = Math.min(viewportWidth, rect.right);
-		const top = Math.max(0, rect.top);
-		const bottom = Math.min(viewportHeight, rect.bottom);
+		const left = Math.max(bounds.left, rect.left);
+		const right = Math.min(bounds.right, rect.right);
+		const top = Math.max(bounds.top, rect.top);
+		const bottom = Math.min(bounds.bottom, rect.bottom);
 
 		if (right - left <= 0 || bottom - top <= 0) return undefined;
 
@@ -233,27 +295,25 @@ export class Spav {
 	}
 
 	/**
-	 * Checks if an element intersects the viewport.
+	 * Checks if an element intersects the given bounds.
 	 *
 	 * @param element - The element to check.
-	 * @param viewportWidth - The width of the viewport.
-	 * @param viewportHeight - The height of the viewport.
-	 * @returns `true` if the element intersects the viewport, `false` otherwise.
+	 * @param bounds - The rectangle to test against.
+	 * @returns `true` if the element intersects the bounds, `false` otherwise.
 	 */
-	#intersectsViewport(element: Element, viewportWidth: number, viewportHeight: number) {
-		return this.#getVisibleRect(element, viewportWidth, viewportHeight) !== undefined;
+	#intersects(element: Element, bounds: DOMRect) {
+		return this.#getVisibleRect(element, bounds) !== undefined;
 	}
 
 	/**
-	 * Checks if an element intersects the viewport and is not fully occluded by other elements.
+	 * Checks if an element intersects the given bounds and is not fully occluded by other elements.
 	 *
 	 * @param element - The element to check.
-	 * @param viewportWidth - The width of the viewport.
-	 * @param viewportHeight - The height of the viewport.
+	 * @param bounds - The rectangle to test against.
 	 * @returns `true` if the element is visible, `false` otherwise.
 	 */
-	#isVisible(element: Element, viewportWidth: number, viewportHeight: number) {
-		const visible = this.#getVisibleRect(element, viewportWidth, viewportHeight);
+	#isVisible(element: Element, bounds: DOMRect) {
+		const visible = this.#getVisibleRect(element, bounds);
 		if (!visible) return false;
 
 		const centerX = visible.left + visible.width / 2;
@@ -281,28 +341,75 @@ export class Spav {
 	}
 
 	/**
+	 * Returns the element that currently holds focus, or `undefined` when focus rests on
+	 * the document body (i.e. nothing is actively focused).
+	 *
+	 * @returns The focused element, or `undefined`.
+	 */
+	#getFocused() {
+		const active = document.activeElement;
+		return active && active !== document.body ? active : undefined;
+	}
+
+	/**
+	 * Resolves the element sequential (tab) navigation should focus next.
+	 *
+	 * @param next - `true` to move forward, `false` for backward (shift+tab).
+	 * @returns The element to focus, or `null` if there is none.
+	 */
+	#getTabbable(next: boolean) {
+		const focused = this.#getFocused();
+		const originEl = this.#origin?.element;
+
+		// A click origin has no element, only a point — nothing there was ever focused,
+		// so land on the focusable nearest to it rather than stepping past.
+		if (!focused && !originEl && this.#origin) {
+			const nearest = this.#getNearestFocusable(this.#origin.rect.x, this.#origin.rect.y);
+			if (nearest) return nearest;
+		}
+
+		// Otherwise step to the adjacent focusable — from the focused element, the
+		// previously focused one, or the document start.
+		const walker = this.#createFocusableWalker();
+		walker.currentNode = focused ?? (originEl?.isConnected ? originEl : document.body);
+
+		return (next ? walker.nextNode() : walker.previousNode()) as Element | null;
+	}
+
+	/**
 	 * Determines the current spatial navigation origin point.
 	 *
-	 * @param rect - An optional bounding rectangle to use as a fallback origin.
+	 * @param origin - An origin to fall back to when nothing is focused.
 	 * @returns The origin element (if identified) and its bounding rectangle.
 	 */
-	#getOrigin(rect?: DOMRect): Origin {
-		const active = document.activeElement;
+	#getOrigin(origin?: Origin): Origin {
+		const focused = this.#getFocused();
 
-		if (active && active !== document.body) {
-			if (this.#isContainer(active) && rect) return { rect };
+		if (focused) {
+			if (this.#isContainer(focused) && origin) {
+				return { rect: origin.rect };
+			}
 
 			return {
-				element: active,
-				rect: this.#getRect(active)
+				element: focused,
+				rect: this.#getRect(focused)
 			};
 		}
 
-		if (rect) return { rect };
+		if (origin) {
+			if (origin.element?.isConnected) {
+				return {
+					element: origin.element,
+					rect: this.#getRect(origin.element)
+				};
+			}
+
+			return { rect: origin.rect };
+		}
 
 		return {
 			element: document.documentElement,
-			rect: new DOMRect(0, 0, window.innerWidth, window.innerHeight)
+			rect: this.#getRect(document.documentElement)
 		};
 	}
 
@@ -395,8 +502,7 @@ export class Spav {
 		origin: Origin,
 		candidates: Element[],
 		direction: SpavDirection,
-		viewportWidth: number,
-		viewportHeight: number
+		bounds: DOMRect
 	) {
 		const pool = [...candidates];
 
@@ -404,7 +510,7 @@ export class Spav {
 			const best = this.#selectBestCandidate(origin, pool, direction);
 
 			if (!best) return undefined;
-			if (this.#isVisible(best, viewportWidth, viewportHeight)) return best;
+			if (this.#isVisible(best, bounds)) return best;
 
 			pool.splice(pool.indexOf(best), 1);
 		}
@@ -461,7 +567,7 @@ export class Spav {
 
 		target.focus({ focusVisible: this.focusVisible, preventScroll: true });
 		this.#scrollIntoView(target);
-		this.#originRect = undefined;
+		this.#origin = undefined;
 		this.#currentScrollContainer = undefined;
 		this.onFocus?.({ target, origin, direction });
 
@@ -497,7 +603,7 @@ export class Spav {
 					element: this.#currentScrollContainer,
 					rect: this.#getRect(this.#currentScrollContainer)
 				}
-			: this.#getOrigin(this.#originRect);
+			: this.#getOrigin(this.#origin);
 
 		const originEl = origin.element ?? document.elementFromPoint(origin.rect.x, origin.rect.y);
 		let container: Element | undefined;
@@ -508,41 +614,24 @@ export class Spav {
 			container = document.documentElement;
 		}
 
-		const viewportWidth = document.documentElement.clientWidth;
-		const viewportHeight = document.documentElement.clientHeight;
+		const viewport = this.#getRect(document.documentElement);
 
 		while (container) {
 			const candidates = this.#getCandidates(container);
 			const visibleCandidates = candidates.filter(
-				(candidate) =>
-					candidate !== origin.element &&
-					this.#intersectsViewport(candidate, viewportWidth, viewportHeight)
+				(candidate) => candidate !== origin.element && this.#intersects(candidate, viewport)
 			);
 
 			if (visibleCandidates.length) {
-				let best = this.#selectBestVisible(
-					origin,
-					visibleCandidates,
-					direction,
-					viewportWidth,
-					viewportHeight
-				);
+				let best = this.#selectBestVisible(origin, visibleCandidates, direction, viewport);
 
 				while (best && !this.#isFocusable(best) && this.#isContainer(best)) {
 					const innerCandidates = this.#getCandidates(best);
 					const visibleInner = innerCandidates.filter(
-						(candidate) =>
-							candidate !== origin.element &&
-							this.#intersectsViewport(candidate, viewportWidth, viewportHeight)
+						(candidate) => candidate !== origin.element && this.#intersects(candidate, viewport)
 					);
 
-					const next = this.#selectBestVisible(
-						origin,
-						visibleInner,
-						direction,
-						viewportWidth,
-						viewportHeight
-					);
+					const next = this.#selectBestVisible(origin, visibleInner, direction, viewport);
 
 					// Scroll container entered with no visible targets inside
 					if (!next && this.#isScrollContainer(best)) {
@@ -551,7 +640,7 @@ export class Spav {
 						// Blur active element if outside scroll container
 						if (active && active !== document.body && !best.contains(active)) {
 							if (isFocusableElement(active)) active.blur();
-							this.#originRect = undefined;
+							this.#origin = undefined;
 						}
 
 						this.#currentScrollContainer = best;
@@ -564,12 +653,8 @@ export class Spav {
 
 				// Skip candidate clipped at the trailing edge while scrolling
 				if (best && this.#currentScrollContainer) {
-					const containerRect =
-						this.#currentScrollContainer === document.documentElement
-							? new DOMRect(0, 0, viewportWidth, viewportHeight)
-							: this.#getRect(this.#currentScrollContainer);
-
 					const bestRect = this.#getRect(best);
+					const containerRect = this.#getRect(this.#currentScrollContainer);
 
 					const scrollsBackward =
 						(direction === 'down' && bestRect.top < containerRect.top) ||
@@ -616,10 +701,10 @@ export class Spav {
 						active &&
 						active !== document.body &&
 						isFocusableElement(active) &&
-						!this.#isVisible(active, viewportWidth, viewportHeight)
+						!this.#isVisible(active, viewport)
 					) {
 						active.blur();
-						this.#originRect = undefined;
+						this.#origin = undefined;
 						this.#currentScrollContainer = scrollContainer;
 					}
 
@@ -638,7 +723,7 @@ export class Spav {
 	destroy() {
 		this.#rects.clear();
 		this.#scrollContainers.clear();
-		this.#originRect = undefined;
+		this.#origin = undefined;
 		this.#currentScrollContainer = undefined;
 
 		window.removeEventListener('keydown', this.#onKeyDown);
