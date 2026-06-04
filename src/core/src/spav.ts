@@ -224,6 +224,24 @@ export class Spav {
 	}
 
 	/**
+	 * Computes the content box of an element in viewport coordinates — the region that
+	 * clips overflow, excluding its border and scrollbar.
+	 *
+	 * @param element - The element to measure.
+	 * @returns The element's content-box rectangle.
+	 */
+	#getClipRect(element: Element) {
+		const rect = this.#getRect(element);
+
+		return new DOMRect(
+			rect.left + element.clientLeft,
+			rect.top + element.clientTop,
+			element.clientWidth,
+			element.clientHeight
+		);
+	}
+
+	/**
 	 * Determines if an element can actively receive focus.
 	 *
 	 * @param element - The element to check.
@@ -292,7 +310,7 @@ export class Spav {
 			container !== document.documentElement;
 			container = this.#getScrollContainer(container)
 		) {
-			visible = getVisibleRect(visible, this.#getRect(container));
+			visible = getVisibleRect(visible, this.#getClipRect(container));
 			if (!visible) return false;
 		}
 
@@ -636,7 +654,7 @@ export class Spav {
 				// Skip candidate clipped at the trailing edge while scrolling
 				if (best && this.#currentScrollContainer) {
 					const bestRect = this.#getRect(best);
-					const containerRect = this.#getRect(this.#currentScrollContainer);
+					const containerRect = this.#getClipRect(this.#currentScrollContainer);
 
 					const scrollsBackward =
 						(direction === 'down' && bestRect.top < containerRect.top) ||
