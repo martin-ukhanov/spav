@@ -1,7 +1,8 @@
 import type { FocusableElement, SpavDirection } from './types';
 
 /**
- * Determines if an element is a scroll container.
+ * Determines if an element is a scroll container by checking for content overflow
+ * and scrollable computed styles. The document root is evaluated on overflow alone.
  *
  * @param element - The element to check.
  * @returns `true` if the element is a scroll container, `false` otherwise.
@@ -25,7 +26,7 @@ export function isScrollContainer(element: Element) {
 /**
  * Determines if an element can be scrolled in a specific direction.
  *
- * @param element - The scroll container element to check.
+ * @param element - The element to check.
  * @param direction - The direction to evaluate.
  * @returns `true` if scrolling is possible in the given direction, `false` otherwise.
  */
@@ -60,13 +61,12 @@ export function isFocusableElement(element: Element): element is FocusableElemen
 }
 
 /**
- * Determines whether an arrow key should escape an element to spatial navigation.
- * Non-editable elements always escape; editable ones escape only when the caret is
- * collapsed at the relevant edge.
+ * Determines if spatial navigation should escape an element. Editable elements
+ * only escape when the caret is collapsed at the relevant directional edge.
  *
- * @param element - The element to inspect.
+ * @param element - The element to check.
  * @param direction - The direction of navigation.
- * @returns `true` if navigation should proceed, `false` if the element keeps the key.
+ * @returns `true` if navigation should proceed, `false` otherwise.
  */
 export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 	if (
@@ -118,7 +118,7 @@ export function intersects(rect: DOMRect, bounds: DOMRect) {
  *
  * @param rect - The rectangle to clip.
  * @param bounds - The rectangle to clip against.
- * @returns The clipped rectangle, or `undefined` if the rectangle lies outside the bounds.
+ * @returns The clipped rectangle, or `undefined` if the rectangle is outside the bounds.
  */
 export function getVisibleRect(rect: DOMRect, bounds: DOMRect) {
 	const left = Math.max(bounds.left, rect.left);
@@ -127,15 +127,14 @@ export function getVisibleRect(rect: DOMRect, bounds: DOMRect) {
 	const bottom = Math.min(bounds.bottom, rect.bottom);
 
 	if (right - left <= 0 || bottom - top <= 0) return undefined;
-
 	return new DOMRect(left, top, right - left, bottom - top);
 }
 
 /**
- * Checks if a target rectangle is located in a specific direction relative to an origin rectangle.
+ * Checks if a target rectangle is located in a direction relative to an origin rectangle.
  *
- * @param origin - The bounding rectangle of the origin.
- * @param target - The bounding rectangle of the target.
+ * @param origin - The origin rectagle.
+ * @param target - The target rectangle.
  * @param direction - The direction to evaluate.
  * @returns `true` if the target is in the specified direction relative to the origin, `false` otherwise.
  */
@@ -180,12 +179,12 @@ export function isInDirection(origin: DOMRect, target: DOMRect, direction: SpavD
 }
 
 /**
- * Calculates the physical edge-to-edge distance between two rectangles in a given direction.
+ * Calculates the edge-to-edge distance between two rectangles in a direction.
  *
- * @param origin - The bounding rectangle of the origin.
- * @param target - The bounding rectangle of the target.
- * @param direction - The direction to measure.
- * @returns The calculated edge distance in pixels.
+ * @param origin - The origin rectagle.
+ * @param target - The target rectangle.
+ * @param direction - The direction to evaluate.
+ * @returns The calculated edge distance value.
  */
 export function getEdgeDistance(origin: DOMRect, target: DOMRect, direction: SpavDirection) {
 	switch (direction) {
@@ -203,10 +202,10 @@ export function getEdgeDistance(origin: DOMRect, target: DOMRect, direction: Spa
 /**
  * Calculates a weighted heuristic distance between two rectangles.
  *
- * @param origin - The bounding rectangle of the origin.
- * @param target - The bounding rectangle of the target.
+ * @param origin - The origin rectagle.
+ * @param target - The target rectangle.
  * @param direction - The direction to evaluate.
- * @returns A weighted distance value.
+ * @returns The calculated weighted distance value.
  */
 export function getWeightedDistance(origin: DOMRect, target: DOMRect, direction: SpavDirection) {
 	const fromWidth = Math.max(origin.width, 1);
