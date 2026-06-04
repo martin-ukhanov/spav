@@ -66,17 +66,17 @@ export class Spav {
 		let direction: SpavDirection | undefined;
 
 		switch (e.key) {
-			case 'ArrowUp':
-				direction = 'up';
-				break;
-			case 'ArrowDown':
-				direction = 'down';
-				break;
 			case 'ArrowLeft':
 				direction = 'left';
 				break;
 			case 'ArrowRight':
 				direction = 'right';
+				break;
+			case 'ArrowUp':
+				direction = 'up';
+				break;
+			case 'ArrowDown':
+				direction = 'down';
 				break;
 		}
 
@@ -535,10 +535,10 @@ export class Spav {
 		}
 
 		const offsets = {
-			up: { top: -amount },
-			down: { top: amount },
 			left: { left: -amount },
-			right: { left: amount }
+			right: { left: amount },
+			up: { top: -amount },
+			down: { top: amount }
 		};
 
 		container.scrollBy({ ...offsets[direction], behavior });
