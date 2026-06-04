@@ -95,13 +95,10 @@ export class Spav {
 
 	#onFocusOut = (e: FocusEvent) => {
 		if (e.relatedTarget || !(e.target instanceof Element)) return;
-		// Remembering the element marks this origin as "was focused", so tab steps past it.
 		this.#origin = { element: e.target, rect: e.target.getBoundingClientRect() };
 	};
 
 	#onMouseUp = (e: MouseEvent) => {
-		// A click is a bare position (no element): arrow nav resumes from the point and
-		// tab lands on the focusable nearest to it.
 		this.#origin = { rect: new DOMRect(e.clientX, e.clientY) };
 		this.#currentScrollContainer = undefined;
 	};
@@ -211,12 +208,12 @@ export class Spav {
 		let rect = this.#rects.get(element);
 
 		if (!rect) {
-			// The document element's box spans the whole document; treat it as the
-			// viewport, which is the spatial-navigation root.
-			rect =
-				element === document.documentElement
-					? new DOMRect(0, 0, element.clientWidth, element.clientHeight)
-					: element.getBoundingClientRect();
+			if (element === document.documentElement) {
+				rect = new DOMRect(0, 0, element.clientWidth, element.clientHeight);
+			} else {
+				rect = element.getBoundingClientRect();
+			}
+
 			this.#rects.set(element, rect);
 		}
 
@@ -353,25 +350,22 @@ export class Spav {
 	 * Resolves the element sequential (tab) navigation should focus next.
 	 *
 	 * @param next - `true` to move forward, `false` for backward (shift+tab).
-	 * @returns The element to focus, or `null` if there is none.
+	 * @returns The element to focus, or `undefined` if there is none.
 	 */
 	#getTabbable(next: boolean) {
 		const focused = this.#getFocused();
 		const originEl = this.#origin?.element;
 
-		// A click origin has no element, only a point — nothing there was ever focused,
-		// so land on the focusable nearest to it rather than stepping past.
 		if (!focused && !originEl && this.#origin) {
 			const nearest = this.#getNearestFocusable(this.#origin.rect.x, this.#origin.rect.y);
 			if (nearest) return nearest;
 		}
 
-		// Otherwise step to the adjacent focusable — from the focused element, the
-		// previously focused one, or the document start.
 		const walker = this.#createFocusableWalker();
 		walker.currentNode = focused ?? (originEl?.isConnected ? originEl : document.body);
+		const tabbable = next ? walker.nextNode() : walker.previousNode();
 
-		return (next ? walker.nextNode() : walker.previousNode()) as Element | null;
+		return tabbable && tabbable instanceof Element ? tabbable : undefined;
 	}
 
 	/**
