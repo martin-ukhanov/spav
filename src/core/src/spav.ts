@@ -181,8 +181,7 @@ export class Spav {
 
 	/**
 	 * Computes the clipping rectangle of an element in viewport coordinates.
-	 * This represents the visible client area (excluding borders and scrollbars)
-	 * where overflow content is clipped.
+	 * This represents the visible client area (excluding borders and scrollbars) where overflow content is clipped.
 	 *
 	 * @param element - The element to measure.
 	 * @returns The computed clipping rectangle.
@@ -459,8 +458,7 @@ export class Spav {
 
 	/**
 	 * Scrolls a container in the specified direction based on the current configuration.
-	 * Supports disabling scroll, applying specific scroll offsets and behaviors,
-	 * or executing a custom scroll function.
+	 * Supports disabling scroll, applying specific scroll offsets and behaviors, or executing a custom scroll function.
 	 *
 	 * @param container - The container element to scroll.
 	 * @param direction - The direction to scroll.
@@ -496,8 +494,7 @@ export class Spav {
 
 	/**
 	 * Scrolls a target element into view based on the current configuration.
-	 * Supports disabling the action, applying specific scroll options,
-	 * or executing a custom scroll function.
+	 * Supports disabling the action, applying specific scroll options, or executing a custom scroll function.
 	 *
 	 * @param target - The target element to scroll into view.
 	 */
