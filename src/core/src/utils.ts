@@ -70,16 +70,16 @@ export function isFocusableElement(element: Element): element is FocusableElemen
  */
 export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 	if (
-		!(element instanceof HTMLTextAreaElement) &&
-		!(
-			element instanceof HTMLInputElement &&
-			['text', 'search', 'url', 'tel', 'password', 'email'].includes(element.type)
-		)
+		(!(element instanceof HTMLTextAreaElement) &&
+			!(
+				element instanceof HTMLInputElement &&
+				['text', 'search', 'url', 'tel', 'password', 'email'].includes(element.type)
+			)) ||
+		element.readOnly ||
+		element.disabled
 	) {
 		return true;
 	}
-
-	if (element.readOnly || element.disabled) return true;
 
 	const atStart = direction === 'left' || direction === 'up';
 
