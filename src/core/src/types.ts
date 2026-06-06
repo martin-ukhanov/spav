@@ -101,3 +101,10 @@ export interface SpavOptions {
 	 */
 	onFocus?: SpavFocusCallback;
 }
+
+export interface SpavCursorOptions {
+	padding?: number;
+	duration?: EffectTiming['duration'];
+	easing?: EffectTiming['easing'];
+	matchBorderRadius?: boolean;
+}
