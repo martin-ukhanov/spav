@@ -214,9 +214,9 @@ export class Spav {
 	 */
 	#isFocusable(element: Element): element is FocusableElement {
 		if (
+			!element.isConnected ||
 			element === document.documentElement ||
 			element === document.body ||
-			!element.isConnected ||
 			!isFocusableElement(element) ||
 			element.hasAttribute('data-spav-ignore')
 		) {
