@@ -288,11 +288,15 @@ export class Spav {
 		const insetBottom = Math.max(centerY, visible.bottom - 1);
 
 		const testPoints = [
-			{ x: centerX, y: centerY },
-			{ x: insetLeft, y: insetTop },
-			{ x: insetRight, y: insetTop },
-			{ x: insetLeft, y: insetBottom },
-			{ x: insetRight, y: insetBottom }
+			{ x: centerX, y: centerY }, // Center
+			{ x: insetLeft, y: centerY }, // Left center
+			{ x: insetRight, y: centerY }, // Right center
+			{ x: centerX, y: insetTop }, // Top center
+			{ x: centerX, y: insetBottom }, // Bottom center
+			{ x: insetLeft, y: insetTop }, // Top left
+			{ x: insetRight, y: insetTop }, // Top right
+			{ x: insetLeft, y: insetBottom }, // Bottom left
+			{ x: insetRight, y: insetBottom } // Bottom right
 		];
 
 		for (const { x, y } of testPoints) {
