@@ -518,9 +518,9 @@ export class Spav {
 		const options = typeof this.scrollIntoView === 'object' ? this.scrollIntoView : {};
 
 		target.scrollIntoView({
-			behavior: 'auto',
-			block: 'nearest',
 			inline: 'nearest',
+			block: 'nearest',
+			behavior: 'auto',
 			...options
 		});
 	}
