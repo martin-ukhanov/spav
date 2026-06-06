@@ -1,56 +1,66 @@
 import { isFocusableElement } from './utils';
-import type { FocusableElement, SpavCursorOptions } from './types';
-
-const ANCHOR_NAME = '--spav-cursor';
+import type { FocusableElement } from './types';
 
 export class SpavCursor {
-	#element: HTMLElement;
-
-	#rect: DOMRect | undefined;
-	#rafId: number | undefined;
-
+	#cursor: HTMLElement;
 	#target: FocusableElement | undefined;
-	#originalAnchorName: string | undefined;
-	#inTransit: boolean;
 
-	#scaleAnimation: Animation | undefined;
-	#transitAnimation: Animation | undefined;
+	#rafId: number | undefined;
+	#lastTime: number | undefined;
 
-	padding: number;
-	duration: EffectTiming['duration'];
-	easing: EffectTiming['easing'];
-	matchBorderRadius: boolean;
+	#isSettled: boolean = true;
 
-	constructor({
-		padding = 0,
-		duration = 250,
-		easing = 'ease',
-		matchBorderRadius = true
-	}: SpavCursorOptions = {}) {
-		this.#inTransit = false;
-		this.padding = padding;
-		this.duration = duration;
-		this.easing = easing;
-		this.matchBorderRadius = matchBorderRadius;
+	#currentRect: DOMRect;
+	#lastRect: DOMRect;
 
-		this.#element = document.createElement('div');
-		this.#element.setAttribute('data-spav-cursor', '');
-		this.#element.setAttribute('aria-hidden', 'true');
+	constructor() {
+		this.#cursor = document.createElement('div');
+		this.#cursor.setAttribute('data-spav-cursor', '');
+		this.#cursor.setAttribute('aria-hidden', 'true');
 
-		Object.assign(this.#element.style, {
+		Object.assign(this.#cursor.style, {
 			position: 'absolute',
-			positionAnchor: ANCHOR_NAME,
+			top: '0',
+			left: '0',
 			pointerEvents: 'none',
-			scale: '0',
-			willChange: 'transform',
-			contain: 'layout'
-		});
+			opacity: '0',
+			transition: 'opacity 0.15s ease',
+			willChange: 'transform'
+		} as CSSStyleDeclaration);
 
-		document.body.appendChild(this.#element);
+		this.#currentRect = new DOMRect();
+		this.#lastRect = new DOMRect();
 
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
 	}
+
+	#attachToGlobal = () => {
+		if (this.#cursor.parentElement !== document.body) {
+			document.body.appendChild(this.#cursor);
+		}
+
+		this.#currentRect.x = this.#lastRect.x;
+		this.#currentRect.y = this.#lastRect.y;
+		this.#currentRect.width = this.#lastRect.width;
+		this.#currentRect.height = this.#lastRect.height;
+
+		Object.assign(this.#cursor.style, {
+			zIndex: '2147483647',
+			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`
+		} as CSSStyleDeclaration);
+	};
+
+	#attachToTarget = (target: Element) => {
+		const offsetParent = (target as HTMLElement).offsetParent ?? document.body;
+
+		if (this.#cursor.parentElement !== offsetParent) {
+			offsetParent.appendChild(this.#cursor);
+		}
+
+		const targetZIndex = getComputedStyle(target).zIndex;
+		this.#cursor.style.zIndex = targetZIndex !== 'auto' ? targetZIndex : '';
+	};
 
 	#onFocusIn = (event: FocusEvent) => {
 		const { target } = event;
@@ -61,278 +71,116 @@ export class SpavCursor {
 			isFocusableElement(target) &&
 			target.matches(':focus-visible')
 		) {
-			this.#setTarget(target);
+			const isFirstAppearance = !this.#target;
+			this.#target = target;
+
+			if (isFirstAppearance) {
+				this.#isSettled = true;
+				this.#attachToTarget(target);
+			} else {
+				if (this.#isSettled) {
+					this.#isSettled = false;
+					this.#attachToGlobal();
+				}
+			}
+
+			if (this.#rafId === undefined) {
+				this.#rafId = requestAnimationFrame(this.#tick);
+			}
 		}
 	};
 
 	#onFocusOut = (event: FocusEvent) => {
-		if (event.relatedTarget) return;
-		if (event.target !== this.#target) return;
-		this.#setTarget(undefined);
+		if (!event.relatedTarget) {
+			this.#target = undefined;
+			this.#isSettled = true;
+		}
 	};
 
-	#getDesiredParent(target: Element) {
-		const parent = target instanceof HTMLElement ? target.offsetParent : null;
-		return parent ?? document.body;
-	}
-
-	#setAnchorName(element: FocusableElement) {
-		const original = element.style.anchorName;
-		this.#originalAnchorName = original;
-
-		if (original && original !== 'none') {
-			if (!original.includes(ANCHOR_NAME)) {
-				element.style.anchorName = `${original}, ${ANCHOR_NAME}`;
-			}
-		} else {
-			element.style.anchorName = ANCHOR_NAME;
-		}
-	}
-
-	#clearAnchorName(element: FocusableElement | undefined) {
-		if (!element) return;
-		element.style.anchorName = this.#originalAnchorName ?? '';
-		this.#originalAnchorName = undefined;
-	}
-
-	#setAnchor() {
-		Object.assign(this.#element.style, {
-			top: `calc(anchor(top) - ${this.padding}px)`,
-			left: `calc(anchor(left) - ${this.padding}px)`,
-			width: `calc(anchor-size(width) + ${this.padding * 2}px)`,
-			height: `calc(anchor-size(height) + ${this.padding * 2}px)`
-		});
-	}
-
-	#paddedRect(rect: DOMRect) {
-		return new DOMRect(
-			rect.left - this.padding,
-			rect.top - this.padding,
-			rect.width + this.padding * 2,
-			rect.height + this.padding * 2
-		);
-	}
-
-	/**
-	 * Offsets a computed corner radius by `padding` so the cursor stays concentric with its
-	 * target. A corner may hold one (circular) or two (elliptical) components; a non-zero `px`
-	 * length grows by `padding` (clamped at 0), while a sharp (0) corner stays sharp and
-	 * percentages or other units scale with the box already.
-	 */
-	#paddedRadius(radius: string) {
-		if (!this.padding) return radius;
-
-		return radius
-			.split(' ')
-			.map((part) => {
-				if (!part.endsWith('px')) return part;
-
-				const value = parseFloat(part);
-				return value === 0 ? part : `${Math.max(0, value + this.padding)}px`;
-			})
-			.join(' ');
-	}
-
-	/** Copies the target's per-corner border radius onto the cursor, adjusted for `padding`. */
-	#matchRadius(target: FocusableElement) {
-		const style = getComputedStyle(target);
-
-		this.#element.style.borderTopLeftRadius = this.#paddedRadius(style.borderTopLeftRadius);
-		this.#element.style.borderTopRightRadius = this.#paddedRadius(style.borderTopRightRadius);
-		this.#element.style.borderBottomRightRadius = this.#paddedRadius(style.borderBottomRightRadius);
-		this.#element.style.borderBottomLeftRadius = this.#paddedRadius(style.borderBottomLeftRadius);
-	}
-
-	#reinsert() {
-		const parent = this.#element.parentElement;
-		if (!parent) return;
-		this.#element.remove();
-		parent.append(this.#element);
-	}
-
-	#enterTransit() {
-		this.#element.style.position = 'fixed';
-		this.#element.style.zIndex = '2147483647';
-		this.#inTransit = true;
-	}
-
-	#exitTransit() {
-		this.#element.style.position = 'absolute';
-		this.#element.style.zIndex = '';
-		this.#inTransit = false;
-		this.#reinsert();
-	}
-
-	#animateScale(to: number) {
-		if (this.#scaleAnimation) {
-			this.#scaleAnimation.commitStyles();
-			this.#scaleAnimation.cancel();
-		}
-
-		this.#scaleAnimation = this.#element.animate(
-			{ scale: to },
-			{
-				duration: this.duration,
-				easing: this.easing,
-				fill: 'forwards'
-			}
-		);
-
-		this.#scaleAnimation.onfinish = () => {
-			this.#scaleAnimation?.commitStyles();
-			this.#scaleAnimation?.cancel();
-		};
-	}
-
-	#getCursorRect(anchor: FocusableElement | undefined) {
-		if (this.#rect && !anchor?.checkVisibility()) {
-			return this.#rect;
-		}
-
-		return this.#element.getBoundingClientRect();
-	}
-
-	#trackRect = () => {
+	#tick = (time: number) => {
 		if (!this.#target) {
+			this.#cursor.style.opacity = '0';
+			this.#lastTime = undefined;
 			this.#rafId = undefined;
 			return;
 		}
 
-		if (this.#target.checkVisibility()) {
-			this.#rect = this.#element.getBoundingClientRect();
-			if (this.matchBorderRadius) this.#matchRadius(this.#target);
+		const dt = time - (this.#lastTime ?? time);
+		this.#lastTime = time;
+
+		const rect = this.#target.getBoundingClientRect();
+
+		if (!this.#isSettled) {
+			const targetX = rect.x + window.scrollX;
+			const targetY = rect.y + window.scrollY;
+			const blend = 1 - Math.exp(-0.015 * dt);
+
+			this.#currentRect.x += (targetX - this.#currentRect.x) * blend;
+			this.#currentRect.y += (targetY - this.#currentRect.y) * blend;
+			this.#currentRect.width += (rect.width - this.#currentRect.width) * blend;
+			this.#currentRect.height += (rect.height - this.#currentRect.height) * blend;
+
+			this.#lastRect.x = this.#currentRect.x;
+			this.#lastRect.y = this.#currentRect.y;
+			this.#lastRect.width = this.#currentRect.width;
+			this.#lastRect.height = this.#currentRect.height;
+
+			const distSq =
+				Math.pow(targetX - this.#currentRect.x, 2) +
+				Math.pow(targetY - this.#currentRect.y, 2) +
+				Math.pow(rect.width - this.#currentRect.width, 2) +
+				Math.pow(rect.height - this.#currentRect.height, 2);
+
+			if (distSq < 0.5) {
+				this.#isSettled = true;
+				this.#attachToTarget(this.#target);
+			}
 		}
 
-		this.#rafId = requestAnimationFrame(this.#trackRect);
+		if (this.#isSettled) {
+			const parent = this.#cursor.offsetParent;
+
+			let localX: number;
+			let localY: number;
+
+			if (parent && parent !== document.documentElement && parent !== document.body) {
+				const parentRect = parent.getBoundingClientRect();
+				localX = rect.x - parentRect.x - parent.clientLeft + parent.scrollLeft;
+				localY = rect.y - parentRect.y - parent.clientTop + parent.scrollTop;
+			} else {
+				localX = rect.x + window.scrollX;
+				localY = rect.y + window.scrollY;
+			}
+
+			this.#currentRect.x = localX;
+			this.#currentRect.y = localY;
+			this.#currentRect.width = rect.width;
+			this.#currentRect.height = rect.height;
+
+			this.#lastRect.x = rect.x + window.scrollX;
+			this.#lastRect.y = rect.y + window.scrollY;
+			this.#lastRect.width = rect.width;
+			this.#lastRect.height = rect.height;
+		}
+
+		Object.assign(this.#cursor.style, {
+			opacity: '1',
+			width: `${this.#currentRect.width}px`,
+			height: `${this.#currentRect.height}px`,
+			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`
+		} as CSSStyleDeclaration);
+
+		this.#rafId = requestAnimationFrame(this.#tick);
 	};
-
-	#startTracking() {
-		if (this.#rafId === undefined) {
-			this.#rafId = requestAnimationFrame(this.#trackRect);
-		}
-	}
-
-	#setTarget(target: FocusableElement | undefined) {
-		if (target === this.#target) return;
-
-		const lastTarget = this.#target;
-		this.#target = target;
-
-		if (!target) {
-			this.#hide(lastTarget);
-			return;
-		}
-
-		this.#startTracking();
-		this.#moveTo(target, lastTarget);
-	}
-
-	/** Freezes the cursor at its current position and scales it out. */
-	#hide(lastTarget: FocusableElement | undefined) {
-		const rect = this.#getCursorRect(lastTarget);
-
-		this.#transitAnimation?.cancel();
-		this.#transitAnimation = undefined;
-
-		this.#enterTransit();
-		this.#element.style.top = `${rect.top}px`;
-		this.#element.style.left = `${rect.left}px`;
-		this.#element.style.width = `${rect.width}px`;
-		this.#element.style.height = `${rect.height}px`;
-
-		this.#clearAnchorName(lastTarget);
-		this.#animateScale(0);
-	}
-
-	/** Moves the cursor onto `target`, animating from its current position. */
-	#moveTo(target: FocusableElement, lastTarget: FocusableElement | undefined) {
-		const from = this.#getCursorRect(lastTarget);
-		const to = this.#paddedRect(target.getBoundingClientRect());
-
-		// Remember where the cursor settles now, as the from-rect fallback next time.
-		this.#rect = to;
-
-		const desiredParent = this.#getDesiredParent(target);
-		const needsReparent = this.#element.parentElement !== desiredParent;
-
-		this.#clearAnchorName(lastTarget);
-		this.#setAnchorName(target);
-
-		// First appearance: no prior position to travel from, so settle and scale in.
-		if (!lastTarget) {
-			if (needsReparent) desiredParent.appendChild(this.#element);
-			this.#setAnchor();
-			this.#exitTransit();
-			this.#animateScale(1);
-			return;
-		}
-
-		// Already mid-transit toward the same parent: land there before re-aiming.
-		if (this.#inTransit && this.#getDesiredParent(lastTarget) === desiredParent) {
-			if (needsReparent) desiredParent.appendChild(this.#element);
-			this.#exitTransit();
-		}
-
-		// Crossing parents (or interrupting a transit): animate from the body in fixed
-		// positioning, then settle into the desired parent when the animation finishes.
-		if (this.#inTransit || needsReparent) {
-			if (this.#element.parentElement !== document.body) {
-				document.body.appendChild(this.#element);
-			}
-
-			this.#enterTransit();
-		}
-
-		const deltaX = from.left - to.left;
-		const deltaY = from.top - to.top;
-
-		this.#transitAnimation?.cancel();
-		this.#transitAnimation = this.#element.animate(
-			[
-				{
-					translate: `${deltaX}px ${deltaY}px`,
-					width: `${from.width}px`,
-					height: `${from.height}px`
-				},
-				{
-					translate: '0 0',
-					width: `${to.width}px`,
-					height: `${to.height}px`
-				}
-			],
-			{
-				duration: this.duration,
-				easing: this.easing,
-				fill: 'none'
-			}
-		);
-
-		this.#transitAnimation.onfinish = () => {
-			if (this.#inTransit) {
-				if (this.#element.parentElement !== desiredParent) desiredParent.appendChild(this.#element);
-				this.#exitTransit();
-			}
-
-			this.#transitAnimation = undefined;
-		};
-	}
 
 	destroy() {
-		if (this.#rafId !== undefined) {
-			cancelAnimationFrame(this.#rafId);
-			this.#rafId = undefined;
-		}
-
-		this.#scaleAnimation?.cancel();
-		this.#transitAnimation?.cancel();
-		this.#scaleAnimation = undefined;
-		this.#transitAnimation = undefined;
-
-		this.#clearAnchorName(this.#target);
-		this.#target = undefined;
-		this.#element.remove();
-
 		window.removeEventListener('focusin', this.#onFocusIn);
 		window.removeEventListener('focusout', this.#onFocusOut);
+
+		if (this.#rafId !== undefined) {
+			cancelAnimationFrame(this.#rafId);
+		}
+
+		this.#cursor.remove();
 	}
 }
