@@ -53,8 +53,8 @@ export class Spav {
 		document.addEventListener('mouseup', this.#onMouseUp);
 	}
 
-	#onKeyDown = (e: KeyboardEvent) => {
-		if (e.key === 'Escape') {
+	#onKeyDown = (event: KeyboardEvent) => {
+		if (event.key === 'Escape') {
 			if (this.blurOnEscape) {
 				const focused = this.#getFocused();
 				if (focused && isFocusableElement(focused)) focused.blur();
@@ -65,7 +65,7 @@ export class Spav {
 
 		let direction: SpavDirection | undefined;
 
-		switch (e.key) {
+		switch (event.key) {
 			case 'ArrowLeft':
 				direction = 'left';
 				break;
@@ -81,23 +81,24 @@ export class Spav {
 		}
 
 		if (direction) {
-			if (e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+			if (event.shiftKey || event.metaKey || event.ctrlKey || event.altKey) return;
 
 			const active = document.activeElement;
 			if (active && !isCaretAtEdge(active, direction)) return;
 
-			e.preventDefault();
+			event.preventDefault();
 			this.navigate(direction);
 		}
 	};
 
-	#onFocusOut = (e: FocusEvent) => {
-		if (e.relatedTarget || !(e.target instanceof Element)) return;
-		this.#origin = { element: e.target, rect: e.target.getBoundingClientRect() };
+	#onFocusOut = (event: FocusEvent) => {
+		const { target, relatedTarget } = event;
+		if (relatedTarget || !(target instanceof Element)) return;
+		this.#origin = { element: target, rect: target.getBoundingClientRect() };
 	};
 
-	#onMouseUp = (e: MouseEvent) => {
-		this.#origin = { rect: new DOMRect(e.clientX, e.clientY) };
+	#onMouseUp = (event: MouseEvent) => {
+		this.#origin = { rect: new DOMRect(event.clientX, event.clientY) };
 		this.#currentScrollContainer = undefined;
 	};
 
