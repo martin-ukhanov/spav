@@ -1,4 +1,4 @@
-import { setRect, copyRect, lerp, isFocusableElement } from './utils';
+import { lerp, isFocusableElement } from './utils';
 import type { FocusableElement, SpavCursorOptions } from './types';
 
 export class SpavCursor {
@@ -100,8 +100,17 @@ export class SpavCursor {
 	}
 
 	#attachToGlobal() {
-		if (this.#cursor.parentElement !== document.body) document.body.appendChild(this.#cursor);
-		copyRect(this.#rect.render, this.#rect.global);
+		if (this.#cursor.parentElement !== document.body) {
+			document.body.appendChild(this.#cursor);
+		}
+
+		Object.assign(this.#rect.render, {
+			x: this.#rect.global.x,
+			y: this.#rect.global.y,
+			width: this.#rect.global.width,
+			height: this.#rect.global.height
+		} as DOMRectInit);
+
 		this.#cursor.style.zIndex = '2147483647';
 	}
 
@@ -109,13 +118,12 @@ export class SpavCursor {
 		const targetX = rect.x + window.scrollX;
 		const targetY = rect.y + window.scrollY;
 
-		setRect(
-			this.#rect.render,
-			lerp(this.#rect.render.x, targetX, progress),
-			lerp(this.#rect.render.y, targetY, progress),
-			lerp(this.#rect.render.width, rect.width, progress),
-			lerp(this.#rect.render.height, rect.height, progress)
-		);
+		Object.assign(this.#rect.render, {
+			x: lerp(this.#rect.render.x, targetX, progress),
+			y: lerp(this.#rect.render.y, targetY, progress),
+			width: lerp(this.#rect.render.width, rect.width, progress),
+			height: lerp(this.#rect.render.height, rect.height, progress)
+		} as DOMRectInit);
 
 		const dx = targetX - this.#rect.render.x;
 		const dy = targetY - this.#rect.render.y;
@@ -141,15 +149,19 @@ export class SpavCursor {
 			y = rect.y + window.scrollY;
 		}
 
-		setRect(this.#rect.render, x, y, rect.width, rect.height);
+		Object.assign(this.#rect.render, {
+			x,
+			y,
+			width: rect.width,
+			height: rect.height
+		} as DOMRectInit);
 
-		setRect(
-			this.#rect.global,
-			rect.x + window.scrollX,
-			rect.y + window.scrollY,
-			rect.width,
-			rect.height
-		);
+		Object.assign(this.#rect.global, {
+			x: rect.x + window.scrollX,
+			y: rect.y + window.scrollY,
+			width: rect.width,
+			height: rect.height
+		} as DOMRectInit);
 	}
 
 	#render() {

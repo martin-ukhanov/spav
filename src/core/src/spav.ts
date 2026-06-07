@@ -1,3 +1,5 @@
+import { SpavCursor } from './cursor';
+
 import {
 	isScrollContainer,
 	canScroll,
@@ -20,6 +22,7 @@ import type {
 	SpavScrollIntoViewCallback,
 	SpavFocusCallback,
 	SpavFocusEvent,
+	SpavCursorOptions,
 	SpavOptions
 } from './types';
 
@@ -27,14 +30,28 @@ export class Spav {
 	#scrollContainers: Map<Element, boolean>;
 	#rects: Map<Element, DOMRect>;
 	#origin?: Origin;
-	#currentScrollContainer?: Element;
+	#activeScrollContainer?: Element;
+
+	#cursor: boolean | SpavCursorOptions = false;
+	#cursorInstance?: SpavCursor;
 
 	blurOnEscape: boolean;
 	scroll: boolean | SpavScrollOptions | SpavScrollCallback;
 	scrollIntoView: boolean | SpavScrollIntoViewOptions | SpavScrollIntoViewCallback;
 	onFocus?: SpavFocusCallback;
 
+	get cursor() {
+		return this.#cursor;
+	}
+
+	set cursor(value: boolean | SpavCursorOptions) {
+		this.#cursor = value;
+		this.#cursorInstance?.destroy();
+		this.#cursorInstance = value ? new SpavCursor(value === true ? undefined : value) : undefined;
+	}
+
 	constructor({
+		cursor = true,
 		blurOnEscape = true,
 		scroll = true,
 		scrollIntoView = true,
@@ -43,6 +60,7 @@ export class Spav {
 		this.#scrollContainers = new Map();
 		this.#rects = new Map();
 
+		this.cursor = cursor;
 		this.blurOnEscape = blurOnEscape;
 		this.scroll = scroll;
 		this.scrollIntoView = scrollIntoView;
@@ -99,7 +117,7 @@ export class Spav {
 
 	#onMouseUp = (event: MouseEvent) => {
 		this.#origin = { rect: new DOMRect(event.clientX, event.clientY) };
-		this.#currentScrollContainer = undefined;
+		this.#activeScrollContainer = undefined;
 	};
 
 	/**
@@ -542,7 +560,7 @@ export class Spav {
 		target.focus({ focusVisible: true, preventScroll: true });
 		this.#scrollIntoView(target);
 		this.#origin = undefined;
-		this.#currentScrollContainer = undefined;
+		this.#activeScrollContainer = undefined;
 		this.onFocus?.({ target, origin, direction });
 
 		return true;
@@ -568,14 +586,14 @@ export class Spav {
 		this.#rects.clear();
 		this.#scrollContainers.clear();
 
-		if (this.#currentScrollContainer && !this.#currentScrollContainer.isConnected) {
-			this.#currentScrollContainer = undefined;
+		if (this.#activeScrollContainer && !this.#activeScrollContainer.isConnected) {
+			this.#activeScrollContainer = undefined;
 		}
 
-		const origin = this.#currentScrollContainer
+		const origin = this.#activeScrollContainer
 			? {
-					element: this.#currentScrollContainer,
-					rect: this.#getRect(this.#currentScrollContainer)
+					element: this.#activeScrollContainer,
+					rect: this.#getRect(this.#activeScrollContainer)
 				}
 			: this.#getOrigin(this.#origin);
 
@@ -619,7 +637,7 @@ export class Spav {
 							this.#origin = undefined;
 						}
 
-						this.#currentScrollContainer = best;
+						this.#activeScrollContainer = best;
 						this.#scrollIntoView(best);
 						return;
 					}
@@ -628,9 +646,9 @@ export class Spav {
 				}
 
 				// Skip candidate clipped at the trailing edge while scrolling
-				if (best && this.#currentScrollContainer) {
+				if (best && this.#activeScrollContainer) {
 					const bestRect = this.#getRect(best);
-					const containerRect = this.#getClipRect(this.#currentScrollContainer);
+					const containerRect = this.#getClipRect(this.#activeScrollContainer);
 
 					const scrollsBackward =
 						(direction === 'down' && bestRect.top < containerRect.top) ||
@@ -681,7 +699,7 @@ export class Spav {
 					) {
 						active.blur();
 						this.#origin = undefined;
-						this.#currentScrollContainer = scrollContainer;
+						this.#activeScrollContainer = scrollContainer;
 					}
 
 					return;
@@ -700,7 +718,10 @@ export class Spav {
 		this.#rects.clear();
 		this.#scrollContainers.clear();
 		this.#origin = undefined;
-		this.#currentScrollContainer = undefined;
+		this.#activeScrollContainer = undefined;
+
+		this.#cursorInstance?.destroy();
+		this.#cursorInstance = undefined;
 
 		window.removeEventListener('keydown', this.#onKeyDown);
 		window.removeEventListener('focusout', this.#onFocusOut);

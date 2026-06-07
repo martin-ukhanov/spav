@@ -1,32 +1,6 @@
 import type { FocusableElement, SpavDirection } from './types';
 
 /**
- * Updates the coordinates and dimensions of a rectangle.
- *
- * @param rect - The rectangle to update.
- * @param x - The new x-coordinate.
- * @param y - The new y-coordinate.
- * @param width - The new width.
- * @param height - The new height.
- */
-export function setRect(rect: DOMRect, x: number, y: number, width: number, height: number) {
-	rect.x = x;
-	rect.y = y;
-	rect.width = width;
-	rect.height = height;
-}
-
-/**
- * Copies the coordinates and dimensions from a source rectangle to a target rectangle.
- *
- * @param target - The target rectangle to update.
- * @param source - The source rectangle to copy from.
- */
-export function copyRect(target: DOMRect, source: DOMRect) {
-	setRect(target, source.x, source.y, source.width, source.height);
-}
-
-/**
  * Linearly interpolates between two values.
  *
  * @param a - The starting value.

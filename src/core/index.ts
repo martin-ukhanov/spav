@@ -1,4 +1,5 @@
 export { Spav } from './src/spav';
+
 export type {
 	SpavDirection,
 	SpavScrollOptions,
@@ -9,5 +10,6 @@ export type {
 	SpavScrollIntoViewCallback,
 	SpavFocusEvent,
 	SpavFocusCallback,
+	SpavCursorOptions,
 	SpavOptions
 } from './src/types';
