@@ -101,3 +101,7 @@ export interface SpavOptions {
 	 */
 	onFocus?: SpavFocusCallback;
 }
+
+export interface SpavCursorOptions {
+	padding?: number;
+}

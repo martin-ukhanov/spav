@@ -1,5 +1,5 @@
 import { setRect, copyRect, lerp, isFocusableElement } from './utils';
-import type { FocusableElement } from './types';
+import type { FocusableElement, SpavCursorOptions } from './types';
 
 const MAX_Z_INDEX = 2147483647;
 const SETTLE_DISTANCE_SQ = 0.5;
@@ -17,7 +17,9 @@ export class SpavCursor {
 	#rafId: number | undefined;
 	#lastTime: number | undefined;
 
-	constructor() {
+	padding: number;
+
+	constructor({ padding = 0 }: SpavCursorOptions = {}) {
 		this.#cursor = document.createElement('div');
 		this.#cursor.dataset.spavCursor = '';
 		this.#cursor.ariaHidden = 'true';
@@ -34,6 +36,8 @@ export class SpavCursor {
 		this.#rect = { render: new DOMRect(), global: new DOMRect() };
 		this.#scale = { current: 0, target: 0 };
 		this.#isSettled = true;
+
+		this.padding = padding;
 
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
@@ -112,9 +116,7 @@ export class SpavCursor {
 
 	#snapTo(rect: DOMRect) {
 		const parent = this.#cursor.offsetParent;
-
-		let x: number;
-		let y: number;
+		let x: number, y: number;
 
 		if (parent && parent !== document.documentElement && parent !== document.body) {
 			const parentRect = parent.getBoundingClientRect();
@@ -138,9 +140,9 @@ export class SpavCursor {
 
 	#render() {
 		Object.assign(this.#cursor.style, {
-			width: `${this.#rect.render.width}px`,
-			height: `${this.#rect.render.height}px`,
-			translate: `${this.#rect.render.x}px ${this.#rect.render.y}px`,
+			width: `${this.#rect.render.width + this.padding * 2}px`,
+			height: `${this.#rect.render.height + this.padding * 2}px`,
+			translate: `${this.#rect.render.x - this.padding}px ${this.#rect.render.y - this.padding}px`,
 			scale: `${this.#scale.current}`
 		} as CSSStyleDeclaration);
 	}
