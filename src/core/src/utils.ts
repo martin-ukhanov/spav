@@ -27,6 +27,19 @@ export function copyRect(target: DOMRect, source: DOMRect) {
 }
 
 /**
+ * Linearly interpolates between two values.
+ *
+ * @param a - The starting value.
+ * @param b - The ending value.
+ * @param t - The interpolation factor.
+ *
+ * @returns The interpolated value.
+ */
+export function lerp(a: number, b: number, t: number) {
+	return a + (b - a) * t;
+}
+
+/**
  * Determines if an element is a scroll container by checking for content overflow
  * and scrollable computed styles. The document root is evaluated on overflow alone.
  *

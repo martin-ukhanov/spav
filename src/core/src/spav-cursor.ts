@@ -1,4 +1,4 @@
-import { setRect, copyRect, isFocusableElement } from './utils';
+import { setRect, copyRect, lerp, isFocusableElement } from './utils';
 import type { FocusableElement } from './types';
 
 const SMOOTHING = 0.015; // exponential follow rate per ms; higher = snappier
@@ -6,14 +6,12 @@ const SETTLE_DISTANCE_SQ = 0.5; // squared-px gap at which the glide ends and th
 const MIN_VISIBLE_SCALE = 0.001;
 const MAX_Z_INDEX = 2147483647;
 
-const lerp = (from: number, to: number, t: number): number => from + (to - from) * t;
-
 export class SpavCursor {
 	#cursor: HTMLElement;
 	#target: FocusableElement | undefined;
 
-	#currentRect: DOMRect;
-	#absoluteRect: DOMRect;
+	#renderRect: DOMRect;
+	#globalRect: DOMRect;
 
 	#currentScale: number;
 	#targetScale: number;
@@ -37,8 +35,8 @@ export class SpavCursor {
 			willChange: 'translate, scale'
 		} as CSSStyleDeclaration);
 
-		this.#currentRect = new DOMRect();
-		this.#absoluteRect = new DOMRect();
+		this.#renderRect = new DOMRect();
+		this.#globalRect = new DOMRect();
 
 		this.#currentScale = 0;
 		this.#targetScale = 0;
@@ -68,7 +66,7 @@ export class SpavCursor {
 				this.#attachToTarget(target);
 			} else if (this.#isSettled) {
 				this.#isSettled = false;
-				this.#attachToBody();
+				this.#attachToGlobal();
 			}
 
 			this.#rafId ??= requestAnimationFrame(this.#tick);
@@ -84,28 +82,17 @@ export class SpavCursor {
 	};
 
 	#attachToTarget(target: Element) {
-		const offsetParent = target instanceof HTMLElement ? target.offsetParent : null;
-		const targetParent = offsetParent ?? document.body;
-
-		if (this.#cursor.parentElement !== targetParent) {
-			targetParent.appendChild(this.#cursor);
-		}
+		const parent = (target instanceof HTMLElement ? target.offsetParent : null) ?? document.body;
+		if (this.#cursor.parentElement !== parent) parent.appendChild(this.#cursor);
 
 		const targetZIndex = getComputedStyle(target).zIndex;
 		this.#cursor.style.zIndex = targetZIndex !== 'auto' ? targetZIndex : '';
 	}
 
-	#attachToBody() {
-		if (this.#cursor.parentElement !== document.body) {
-			document.body.appendChild(this.#cursor);
-		}
-
-		copyRect(this.#currentRect, this.#absoluteRect);
-
-		Object.assign(this.#cursor.style, {
-			zIndex: String(MAX_Z_INDEX),
-			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`
-		} as CSSStyleDeclaration);
+	#attachToGlobal() {
+		if (this.#cursor.parentElement !== document.body) document.body.appendChild(this.#cursor);
+		copyRect(this.#renderRect, this.#globalRect);
+		this.#cursor.style.zIndex = String(MAX_Z_INDEX);
 	}
 
 	#moveTo(rect: DOMRect, blend: number) {
@@ -113,19 +100,17 @@ export class SpavCursor {
 		const targetY = rect.y + window.scrollY;
 
 		setRect(
-			this.#currentRect,
-			lerp(this.#currentRect.x, targetX, blend),
-			lerp(this.#currentRect.y, targetY, blend),
-			lerp(this.#currentRect.width, rect.width, blend),
-			lerp(this.#currentRect.height, rect.height, blend)
+			this.#renderRect,
+			lerp(this.#renderRect.x, targetX, blend),
+			lerp(this.#renderRect.y, targetY, blend),
+			lerp(this.#renderRect.width, rect.width, blend),
+			lerp(this.#renderRect.height, rect.height, blend)
 		);
 
-		copyRect(this.#absoluteRect, this.#currentRect);
-
-		const dx = targetX - this.#currentRect.x;
-		const dy = targetY - this.#currentRect.y;
-		const dw = rect.width - this.#currentRect.width;
-		const dh = rect.height - this.#currentRect.height;
+		const dx = targetX - this.#renderRect.x;
+		const dy = targetY - this.#renderRect.y;
+		const dw = rect.width - this.#renderRect.width;
+		const dh = rect.height - this.#renderRect.height;
 
 		if (dx * dx + dy * dy + dw * dw + dh * dh < SETTLE_DISTANCE_SQ) {
 			this.#isSettled = true;
@@ -148,15 +133,24 @@ export class SpavCursor {
 			localY = rect.y + window.scrollY;
 		}
 
-		setRect(this.#currentRect, localX, localY, rect.width, rect.height);
+		setRect(this.#renderRect, localX, localY, rect.width, rect.height);
 
 		setRect(
-			this.#absoluteRect,
+			this.#globalRect,
 			rect.x + window.scrollX,
 			rect.y + window.scrollY,
 			rect.width,
 			rect.height
 		);
+	}
+
+	#render() {
+		Object.assign(this.#cursor.style, {
+			width: `${this.#renderRect.width}px`,
+			height: `${this.#renderRect.height}px`,
+			translate: `${this.#renderRect.x}px ${this.#renderRect.y}px`,
+			scale: `${this.#currentScale}`
+		} as CSSStyleDeclaration);
 	}
 
 	#tick = (time: number) => {
@@ -172,12 +166,7 @@ export class SpavCursor {
 			if (this.#isSettled) this.#snapTo(rect);
 		}
 
-		Object.assign(this.#cursor.style, {
-			width: `${this.#currentRect.width}px`,
-			height: `${this.#currentRect.height}px`,
-			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`,
-			scale: `${this.#currentScale}`
-		} as CSSStyleDeclaration);
+		this.#render();
 
 		if (!this.#target && this.#currentScale < MIN_VISIBLE_SCALE) {
 			this.#cursor.style.scale = '0';
