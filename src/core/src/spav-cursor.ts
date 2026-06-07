@@ -1,17 +1,27 @@
-import { isFocusableElement } from './utils';
+import { setRect, copyRect, isFocusableElement } from './utils';
 import type { FocusableElement } from './types';
+
+const SMOOTHING = 0.015; // exponential follow rate per ms; higher = snappier
+const SETTLE_DISTANCE_SQ = 0.5; // squared-px gap at which the glide ends and the cursor latches on
+const MIN_VISIBLE_SCALE = 0.001;
+const MAX_Z_INDEX = 2147483647;
+
+const lerp = (from: number, to: number, t: number): number => from + (to - from) * t;
 
 export class SpavCursor {
 	#cursor: HTMLElement;
 	#target: FocusableElement | undefined;
 
+	#currentRect: DOMRect;
+	#absoluteRect: DOMRect;
+
+	#currentScale: number;
+	#targetScale: number;
+
+	#isSettled: boolean;
+
 	#rafId: number | undefined;
 	#lastTime: number | undefined;
-
-	#isSettled: boolean = true;
-
-	#currentRect: DOMRect;
-	#lastRect: DOMRect;
 
 	constructor() {
 		this.#cursor = document.createElement('div');
@@ -23,44 +33,21 @@ export class SpavCursor {
 			top: '0',
 			left: '0',
 			pointerEvents: 'none',
-			opacity: '0',
-			transition: 'opacity 0.15s ease',
-			willChange: 'transform'
+			scale: '0',
+			willChange: 'translate, scale'
 		} as CSSStyleDeclaration);
 
 		this.#currentRect = new DOMRect();
-		this.#lastRect = new DOMRect();
+		this.#absoluteRect = new DOMRect();
+
+		this.#currentScale = 0;
+		this.#targetScale = 0;
+
+		this.#isSettled = true;
 
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
 	}
-
-	#attachToGlobal = () => {
-		if (this.#cursor.parentElement !== document.body) {
-			document.body.appendChild(this.#cursor);
-		}
-
-		this.#currentRect.x = this.#lastRect.x;
-		this.#currentRect.y = this.#lastRect.y;
-		this.#currentRect.width = this.#lastRect.width;
-		this.#currentRect.height = this.#lastRect.height;
-
-		Object.assign(this.#cursor.style, {
-			zIndex: '2147483647',
-			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`
-		} as CSSStyleDeclaration);
-	};
-
-	#attachToTarget = (target: Element) => {
-		const offsetParent = (target as HTMLElement).offsetParent ?? document.body;
-
-		if (this.#cursor.parentElement !== offsetParent) {
-			offsetParent.appendChild(this.#cursor);
-		}
-
-		const targetZIndex = getComputedStyle(target).zIndex;
-		this.#cursor.style.zIndex = targetZIndex !== 'auto' ? targetZIndex : '';
-	};
 
 	#onFocusIn = (event: FocusEvent) => {
 		const { target } = event;
@@ -71,22 +58,20 @@ export class SpavCursor {
 			isFocusableElement(target) &&
 			target.matches(':focus-visible')
 		) {
-			const isFirstAppearance = !this.#target;
-			this.#target = target;
+			const isInit = !this.#target;
 
-			if (isFirstAppearance) {
+			this.#target = target;
+			this.#targetScale = 1;
+
+			if (isInit) {
 				this.#isSettled = true;
 				this.#attachToTarget(target);
-			} else {
-				if (this.#isSettled) {
-					this.#isSettled = false;
-					this.#attachToGlobal();
-				}
+			} else if (this.#isSettled) {
+				this.#isSettled = false;
+				this.#attachToBody();
 			}
 
-			if (this.#rafId === undefined) {
-				this.#rafId = requestAnimationFrame(this.#tick);
-			}
+			this.#rafId ??= requestAnimationFrame(this.#tick);
 		}
 	};
 
@@ -94,93 +79,126 @@ export class SpavCursor {
 		if (!event.relatedTarget) {
 			this.#target = undefined;
 			this.#isSettled = true;
+			this.#targetScale = 0;
 		}
 	};
 
+	#attachToTarget(target: Element) {
+		const offsetParent = target instanceof HTMLElement ? target.offsetParent : null;
+		const targetParent = offsetParent ?? document.body;
+
+		if (this.#cursor.parentElement !== targetParent) {
+			targetParent.appendChild(this.#cursor);
+		}
+
+		const targetZIndex = getComputedStyle(target).zIndex;
+		this.#cursor.style.zIndex = targetZIndex !== 'auto' ? targetZIndex : '';
+	}
+
+	#attachToBody() {
+		if (this.#cursor.parentElement !== document.body) {
+			document.body.appendChild(this.#cursor);
+		}
+
+		copyRect(this.#currentRect, this.#absoluteRect);
+
+		Object.assign(this.#cursor.style, {
+			zIndex: String(MAX_Z_INDEX),
+			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`
+		} as CSSStyleDeclaration);
+	}
+
+	#moveTo(rect: DOMRect, blend: number) {
+		const targetX = rect.x + window.scrollX;
+		const targetY = rect.y + window.scrollY;
+
+		setRect(
+			this.#currentRect,
+			lerp(this.#currentRect.x, targetX, blend),
+			lerp(this.#currentRect.y, targetY, blend),
+			lerp(this.#currentRect.width, rect.width, blend),
+			lerp(this.#currentRect.height, rect.height, blend)
+		);
+
+		copyRect(this.#absoluteRect, this.#currentRect);
+
+		const dx = targetX - this.#currentRect.x;
+		const dy = targetY - this.#currentRect.y;
+		const dw = rect.width - this.#currentRect.width;
+		const dh = rect.height - this.#currentRect.height;
+
+		if (dx * dx + dy * dy + dw * dw + dh * dh < SETTLE_DISTANCE_SQ) {
+			this.#isSettled = true;
+			this.#attachToTarget(this.#target!);
+		}
+	}
+
+	#snapTo(rect: DOMRect) {
+		const parent = this.#cursor.offsetParent;
+
+		let localX: number;
+		let localY: number;
+
+		if (parent && parent !== document.documentElement && parent !== document.body) {
+			const parentRect = parent.getBoundingClientRect();
+			localX = rect.x - parentRect.x - parent.clientLeft + parent.scrollLeft;
+			localY = rect.y - parentRect.y - parent.clientTop + parent.scrollTop;
+		} else {
+			localX = rect.x + window.scrollX;
+			localY = rect.y + window.scrollY;
+		}
+
+		setRect(this.#currentRect, localX, localY, rect.width, rect.height);
+
+		setRect(
+			this.#absoluteRect,
+			rect.x + window.scrollX,
+			rect.y + window.scrollY,
+			rect.width,
+			rect.height
+		);
+	}
+
 	#tick = (time: number) => {
-		if (!this.#target) {
-			this.#cursor.style.opacity = '0';
+		const deltaTime = time - (this.#lastTime ?? time);
+		const blend = 1 - Math.exp(-SMOOTHING * deltaTime);
+
+		this.#lastTime = time;
+		this.#currentScale = lerp(this.#currentScale, this.#targetScale, blend);
+
+		if (this.#target) {
+			const rect = this.#target.getBoundingClientRect();
+			if (!this.#isSettled) this.#moveTo(rect, blend);
+			if (this.#isSettled) this.#snapTo(rect);
+		}
+
+		Object.assign(this.#cursor.style, {
+			width: `${this.#currentRect.width}px`,
+			height: `${this.#currentRect.height}px`,
+			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`,
+			scale: `${this.#currentScale}`
+		} as CSSStyleDeclaration);
+
+		if (!this.#target && this.#currentScale < MIN_VISIBLE_SCALE) {
+			this.#cursor.style.scale = '0';
+			this.#currentScale = 0;
 			this.#lastTime = undefined;
 			this.#rafId = undefined;
 			return;
 		}
 
-		const dt = time - (this.#lastTime ?? time);
-		this.#lastTime = time;
-
-		const rect = this.#target.getBoundingClientRect();
-
-		if (!this.#isSettled) {
-			const targetX = rect.x + window.scrollX;
-			const targetY = rect.y + window.scrollY;
-			const blend = 1 - Math.exp(-0.015 * dt);
-
-			this.#currentRect.x += (targetX - this.#currentRect.x) * blend;
-			this.#currentRect.y += (targetY - this.#currentRect.y) * blend;
-			this.#currentRect.width += (rect.width - this.#currentRect.width) * blend;
-			this.#currentRect.height += (rect.height - this.#currentRect.height) * blend;
-
-			this.#lastRect.x = this.#currentRect.x;
-			this.#lastRect.y = this.#currentRect.y;
-			this.#lastRect.width = this.#currentRect.width;
-			this.#lastRect.height = this.#currentRect.height;
-
-			const distSq =
-				Math.pow(targetX - this.#currentRect.x, 2) +
-				Math.pow(targetY - this.#currentRect.y, 2) +
-				Math.pow(rect.width - this.#currentRect.width, 2) +
-				Math.pow(rect.height - this.#currentRect.height, 2);
-
-			if (distSq < 0.5) {
-				this.#isSettled = true;
-				this.#attachToTarget(this.#target);
-			}
-		}
-
-		if (this.#isSettled) {
-			const parent = this.#cursor.offsetParent;
-
-			let localX: number;
-			let localY: number;
-
-			if (parent && parent !== document.documentElement && parent !== document.body) {
-				const parentRect = parent.getBoundingClientRect();
-				localX = rect.x - parentRect.x - parent.clientLeft + parent.scrollLeft;
-				localY = rect.y - parentRect.y - parent.clientTop + parent.scrollTop;
-			} else {
-				localX = rect.x + window.scrollX;
-				localY = rect.y + window.scrollY;
-			}
-
-			this.#currentRect.x = localX;
-			this.#currentRect.y = localY;
-			this.#currentRect.width = rect.width;
-			this.#currentRect.height = rect.height;
-
-			this.#lastRect.x = rect.x + window.scrollX;
-			this.#lastRect.y = rect.y + window.scrollY;
-			this.#lastRect.width = rect.width;
-			this.#lastRect.height = rect.height;
-		}
-
-		Object.assign(this.#cursor.style, {
-			opacity: '1',
-			width: `${this.#currentRect.width}px`,
-			height: `${this.#currentRect.height}px`,
-			translate: `${this.#currentRect.x}px ${this.#currentRect.y}px`
-		} as CSSStyleDeclaration);
-
 		this.#rafId = requestAnimationFrame(this.#tick);
 	};
 
 	destroy() {
-		window.removeEventListener('focusin', this.#onFocusIn);
-		window.removeEventListener('focusout', this.#onFocusOut);
-
 		if (this.#rafId !== undefined) {
 			cancelAnimationFrame(this.#rafId);
+			this.#rafId = undefined;
 		}
 
 		this.#cursor.remove();
+
+		window.removeEventListener('focusin', this.#onFocusIn);
+		window.removeEventListener('focusout', this.#onFocusOut);
 	}
 }
