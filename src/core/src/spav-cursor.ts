@@ -1,10 +1,10 @@
 import { setRect, copyRect, lerp, isFocusableElement } from './utils';
 import type { FocusableElement } from './types';
 
-const SMOOTHING = 0.015; // exponential follow rate per ms; higher = snappier
-const SETTLE_DISTANCE_SQ = 0.5; // squared-px gap at which the glide ends and the cursor latches on
-const MIN_VISIBLE_SCALE = 0.001;
 const MAX_Z_INDEX = 2147483647;
+const SETTLE_DISTANCE_SQ = 0.5;
+const MIN_VISIBLE_SCALE = 0.001;
+const SMOOTHING = 0.015;
 
 export class SpavCursor {
 	#cursor: HTMLElement;
@@ -23,8 +23,8 @@ export class SpavCursor {
 
 	constructor() {
 		this.#cursor = document.createElement('div');
-		this.#cursor.setAttribute('data-spav-cursor', '');
-		this.#cursor.setAttribute('aria-hidden', 'true');
+		this.#cursor.dataset.spavCursor = '';
+		this.#cursor.ariaHidden = 'true';
 
 		Object.assign(this.#cursor.style, {
 			position: 'absolute',
@@ -95,16 +95,16 @@ export class SpavCursor {
 		this.#cursor.style.zIndex = String(MAX_Z_INDEX);
 	}
 
-	#moveTo(rect: DOMRect, blend: number) {
+	#moveTo(rect: DOMRect, progress: number) {
 		const targetX = rect.x + window.scrollX;
 		const targetY = rect.y + window.scrollY;
 
 		setRect(
 			this.#renderRect,
-			lerp(this.#renderRect.x, targetX, blend),
-			lerp(this.#renderRect.y, targetY, blend),
-			lerp(this.#renderRect.width, rect.width, blend),
-			lerp(this.#renderRect.height, rect.height, blend)
+			lerp(this.#renderRect.x, targetX, progress),
+			lerp(this.#renderRect.y, targetY, progress),
+			lerp(this.#renderRect.width, rect.width, progress),
+			lerp(this.#renderRect.height, rect.height, progress)
 		);
 
 		const dx = targetX - this.#renderRect.x;
@@ -155,14 +155,14 @@ export class SpavCursor {
 
 	#tick = (time: number) => {
 		const deltaTime = time - (this.#lastTime ?? time);
-		const blend = 1 - Math.exp(-SMOOTHING * deltaTime);
+		const progress = 1 - Math.exp(-SMOOTHING * deltaTime);
 
 		this.#lastTime = time;
-		this.#currentScale = lerp(this.#currentScale, this.#targetScale, blend);
+		this.#currentScale = lerp(this.#currentScale, this.#targetScale, progress);
 
 		if (this.#target) {
 			const rect = this.#target.getBoundingClientRect();
-			if (!this.#isSettled) this.#moveTo(rect, blend);
+			if (!this.#isSettled) this.#moveTo(rect, progress);
 			if (this.#isSettled) this.#snapTo(rect);
 		}
 
