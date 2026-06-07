@@ -114,26 +114,26 @@ export class SpavCursor {
 
 		if (dx * dx + dy * dy + dw * dw + dh * dh < SETTLE_DISTANCE_SQ) {
 			this.#isSettled = true;
-			this.#attachToTarget(this.#target!);
+			if (this.#target) this.#attachToTarget(this.#target);
 		}
 	}
 
 	#snapTo(rect: DOMRect) {
 		const parent = this.#cursor.offsetParent;
 
-		let localX: number;
-		let localY: number;
+		let x: number;
+		let y: number;
 
 		if (parent && parent !== document.documentElement && parent !== document.body) {
 			const parentRect = parent.getBoundingClientRect();
-			localX = rect.x - parentRect.x - parent.clientLeft + parent.scrollLeft;
-			localY = rect.y - parentRect.y - parent.clientTop + parent.scrollTop;
+			x = rect.x - parentRect.x - parent.clientLeft + parent.scrollLeft;
+			y = rect.y - parentRect.y - parent.clientTop + parent.scrollTop;
 		} else {
-			localX = rect.x + window.scrollX;
-			localY = rect.y + window.scrollY;
+			x = rect.x + window.scrollX;
+			y = rect.y + window.scrollY;
 		}
 
-		setRect(this.#renderRect, localX, localY, rect.width, rect.height);
+		setRect(this.#renderRect, x, y, rect.width, rect.height);
 
 		setRect(
 			this.#globalRect,
@@ -171,8 +171,8 @@ export class SpavCursor {
 		if (!this.#target && this.#currentScale < MIN_VISIBLE_SCALE) {
 			this.#cursor.style.scale = '0';
 			this.#currentScale = 0;
-			this.#lastTime = undefined;
 			this.#rafId = undefined;
+			this.#lastTime = undefined;
 			return;
 		}
 
@@ -186,7 +186,6 @@ export class SpavCursor {
 		}
 
 		this.#cursor.remove();
-
 		window.removeEventListener('focusin', this.#onFocusIn);
 		window.removeEventListener('focusout', this.#onFocusOut);
 	}
