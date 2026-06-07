@@ -16,8 +16,14 @@ export class SpavCursor {
 	speed: number;
 	padding: number;
 	matchRadius: boolean;
+	autoRaf: boolean;
 
-	constructor({ speed = 0.25, padding = 0, matchRadius = true }: SpavCursorOptions = {}) {
+	constructor({
+		speed = 0.25,
+		padding = 0,
+		matchRadius = true,
+		autoRaf = true
+	}: SpavCursorOptions = {}) {
 		this.#cursor = document.createElement('div');
 		this.#cursor.dataset.spavCursor = '';
 		this.#cursor.ariaHidden = 'true';
@@ -39,6 +45,7 @@ export class SpavCursor {
 		this.speed = speed;
 		this.padding = padding;
 		this.matchRadius = matchRadius;
+		this.autoRaf = autoRaf;
 
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
@@ -70,7 +77,7 @@ export class SpavCursor {
 				this.#attachToGlobal();
 			}
 
-			this.#rafId ??= requestAnimationFrame(this.#tick);
+			if (this.autoRaf) this.#rafId ??= requestAnimationFrame(this.raf);
 		}
 	};
 
@@ -177,7 +184,9 @@ export class SpavCursor {
 		} as CSSStyleDeclaration);
 	}
 
-	#tick = (time: number) => {
+	raf: FrameRequestCallback = (time) => {
+		if (!this.#target && this.#scale.render === 0) return;
+
 		const deltaTime = time - (this.#lastTime ?? time);
 		const speed = Math.min(Math.max(this.speed, 0.01), 1);
 		const progress = 1 - Math.pow(1 - speed, deltaTime / (1000 / 60));
@@ -215,7 +224,7 @@ export class SpavCursor {
 			return;
 		}
 
-		this.#rafId = requestAnimationFrame(this.#tick);
+		if (this.autoRaf) this.#rafId = requestAnimationFrame(this.raf);
 	};
 
 	destroy() {

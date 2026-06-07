@@ -23,6 +23,7 @@ import type {
 	SpavFocusCallback,
 	SpavFocusEvent,
 	SpavCursorOptions,
+	SpavCursorApi,
 	SpavOptions
 } from './types';
 
@@ -32,22 +33,62 @@ export class Spav {
 	#origin?: Origin;
 	#activeScrollContainer?: Element;
 
-	#cursor: boolean | SpavCursorOptions = false;
-	#cursorInstance?: SpavCursor;
+	#cursor?: SpavCursor;
+	#cursorApi?: SpavCursorApi;
 
 	blurOnEscape: boolean;
 	scroll: boolean | SpavScrollOptions | SpavScrollCallback;
 	scrollIntoView: boolean | SpavScrollIntoViewOptions | SpavScrollIntoViewCallback;
 	onFocus?: SpavFocusCallback;
 
-	get cursor() {
-		return this.#cursor;
+	get cursor(): SpavCursorApi | undefined {
+		return this.#cursorApi;
 	}
 
 	set cursor(value: boolean | SpavCursorOptions) {
-		this.#cursor = value;
-		this.#cursorInstance?.destroy();
-		this.#cursorInstance = value ? new SpavCursor(value === true ? undefined : value) : undefined;
+		this.#cursor?.destroy();
+
+		if (value) {
+			const cursor = new SpavCursor(value === true ? undefined : value);
+			this.#cursor = cursor;
+
+			this.#cursorApi = {
+				get speed() {
+					return cursor.speed;
+				},
+				set speed(value) {
+					cursor.speed = value;
+				},
+
+				get padding() {
+					return cursor.padding;
+				},
+				set padding(value) {
+					cursor.padding = value;
+				},
+
+				get matchRadius() {
+					return cursor.matchRadius;
+				},
+				set matchRadius(value) {
+					cursor.matchRadius = value;
+				},
+
+				get autoRaf() {
+					return cursor.autoRaf;
+				},
+				set autoRaf(value) {
+					cursor.autoRaf = value;
+				},
+
+				get raf() {
+					return cursor.raf;
+				}
+			};
+		} else {
+			this.#cursor = undefined;
+			this.#cursorApi = undefined;
+		}
 	}
 
 	constructor({
@@ -720,8 +761,9 @@ export class Spav {
 		this.#origin = undefined;
 		this.#activeScrollContainer = undefined;
 
-		this.#cursorInstance?.destroy();
-		this.#cursorInstance = undefined;
+		this.#cursor?.destroy();
+		this.#cursor = undefined;
+		this.#cursorApi = undefined;
 
 		window.removeEventListener('keydown', this.#onKeyDown);
 		window.removeEventListener('focusout', this.#onFocusOut);
