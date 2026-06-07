@@ -11,15 +11,17 @@ export class SpavCursor {
 	#target: FocusableElement | undefined;
 
 	#rect: { render: DOMRect; global: DOMRect };
-	#scale: { current: number; target: number };
+	#scale: { render: number; target: number };
+	#radius: { render: number[]; target: number[] };
 	#isSettled: boolean;
 
 	#rafId: number | undefined;
 	#lastTime: number | undefined;
 
 	padding: number;
+	matchRadius: boolean;
 
-	constructor({ padding = 0 }: SpavCursorOptions = {}) {
+	constructor({ padding = 0, matchRadius = true }: SpavCursorOptions = {}) {
 		this.#cursor = document.createElement('div');
 		this.#cursor.dataset.spavCursor = '';
 		this.#cursor.ariaHidden = 'true';
@@ -34,10 +36,12 @@ export class SpavCursor {
 		} as CSSStyleDeclaration);
 
 		this.#rect = { render: new DOMRect(), global: new DOMRect() };
-		this.#scale = { current: 0, target: 0 };
+		this.#scale = { render: 0, target: 0 };
+		this.#radius = { render: [0, 0, 0, 0], target: [0, 0, 0, 0] };
 		this.#isSettled = true;
 
 		this.padding = padding;
+		this.matchRadius = matchRadius;
 
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
@@ -58,6 +62,10 @@ export class SpavCursor {
 			this.#scale.target = 1;
 
 			if (isInit) {
+				if (this.matchRadius) {
+					this.#radius.render = this.#getRadius(getComputedStyle(target));
+				}
+
 				this.#isSettled = true;
 				this.#attachToTarget(target);
 			} else if (this.#isSettled) {
@@ -77,12 +85,21 @@ export class SpavCursor {
 		}
 	};
 
+	#getRadius(style: CSSStyleDeclaration) {
+		return [
+			style.borderTopLeftRadius,
+			style.borderTopRightRadius,
+			style.borderBottomRightRadius,
+			style.borderBottomLeftRadius
+		].map((value) => {
+			const r = parseFloat(value);
+			return r === 0 ? 0 : r + this.padding;
+		});
+	}
+
 	#attachToTarget(target: Element) {
 		const parent = (target instanceof HTMLElement ? target.offsetParent : null) ?? document.body;
 		if (this.#cursor.parentElement !== parent) parent.appendChild(this.#cursor);
-
-		const targetZIndex = getComputedStyle(target).zIndex;
-		this.#cursor.style.zIndex = targetZIndex !== 'auto' ? targetZIndex : '';
 	}
 
 	#attachToGlobal() {
@@ -139,11 +156,15 @@ export class SpavCursor {
 	}
 
 	#render() {
+		const p = this.padding;
+		const [tl, tr, br, bl] = this.#radius.render;
+
 		Object.assign(this.#cursor.style, {
-			width: `${this.#rect.render.width + this.padding * 2}px`,
-			height: `${this.#rect.render.height + this.padding * 2}px`,
-			translate: `${this.#rect.render.x - this.padding}px ${this.#rect.render.y - this.padding}px`,
-			scale: `${this.#scale.current}`
+			width: `${this.#rect.render.width + p * 2}px`,
+			height: `${this.#rect.render.height + p * 2}px`,
+			translate: `${this.#rect.render.x - p}px ${this.#rect.render.y - p}px`,
+			borderRadius: this.matchRadius ? `${tl}px ${tr}px ${br}px ${bl}px` : '',
+			scale: `${this.#scale.render}`
 		} as CSSStyleDeclaration);
 	}
 
@@ -152,19 +173,33 @@ export class SpavCursor {
 		const progress = 1 - Math.exp(-SMOOTHING * deltaTime);
 
 		this.#lastTime = time;
-		this.#scale.current = lerp(this.#scale.current, this.#scale.target, progress);
+		this.#scale.render = lerp(this.#scale.render, this.#scale.target, progress);
 
 		if (this.#target) {
 			const rect = this.#target.getBoundingClientRect();
+			const style = getComputedStyle(this.#target);
+
+			if (this.matchRadius) {
+				this.#radius.target = this.#getRadius(style);
+				this.#radius.render = this.#radius.render.map((v, i) =>
+					lerp(v, this.#radius.target[i], progress)
+				);
+			}
+
 			if (!this.#isSettled) this.#moveTo(rect, progress);
-			if (this.#isSettled) this.#snapTo(rect);
+
+			if (this.#isSettled) {
+				const { zIndex } = style;
+				this.#cursor.style.zIndex = zIndex !== 'auto' ? zIndex : '';
+				this.#snapTo(rect);
+			}
 		}
 
 		this.#render();
 
-		if (!this.#target && this.#scale.current < MIN_VISIBLE_SCALE) {
+		if (!this.#target && this.#scale.render < MIN_VISIBLE_SCALE) {
 			this.#cursor.style.scale = '0';
-			this.#scale.current = 0;
+			this.#scale.render = 0;
 			this.#rafId = undefined;
 			this.#lastTime = undefined;
 			return;

@@ -104,4 +104,5 @@ export interface SpavOptions {
 
 export interface SpavCursorOptions {
 	padding?: number;
+	matchRadius?: boolean;
 }
