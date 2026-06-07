@@ -1,11 +1,6 @@
 import { setRect, copyRect, lerp, isFocusableElement } from './utils';
 import type { FocusableElement, SpavCursorOptions } from './types';
 
-const MAX_Z_INDEX = 2147483647;
-const SETTLE_DISTANCE_SQ = 0.5;
-const MIN_VISIBLE_SCALE = 0.001;
-const SMOOTHING = 0.015;
-
 export class SpavCursor {
 	#cursor: HTMLElement;
 	#target: FocusableElement | undefined;
@@ -18,10 +13,11 @@ export class SpavCursor {
 	#rafId: number | undefined;
 	#lastTime: number | undefined;
 
+	speed: number;
 	padding: number;
 	matchRadius: boolean;
 
-	constructor({ padding = 0, matchRadius = true }: SpavCursorOptions = {}) {
+	constructor({ speed = 0.25, padding = 0, matchRadius = true }: SpavCursorOptions = {}) {
 		this.#cursor = document.createElement('div');
 		this.#cursor.dataset.spavCursor = '';
 		this.#cursor.ariaHidden = 'true';
@@ -40,6 +36,7 @@ export class SpavCursor {
 		this.#radius = { render: [0, 0, 0, 0], target: [0, 0, 0, 0] };
 		this.#isSettled = true;
 
+		this.speed = speed;
 		this.padding = padding;
 		this.matchRadius = matchRadius;
 
@@ -105,7 +102,7 @@ export class SpavCursor {
 	#attachToGlobal() {
 		if (this.#cursor.parentElement !== document.body) document.body.appendChild(this.#cursor);
 		copyRect(this.#rect.render, this.#rect.global);
-		this.#cursor.style.zIndex = String(MAX_Z_INDEX);
+		this.#cursor.style.zIndex = '2147483647';
 	}
 
 	#moveTo(rect: DOMRect, progress: number) {
@@ -125,7 +122,7 @@ export class SpavCursor {
 		const dw = rect.width - this.#rect.render.width;
 		const dh = rect.height - this.#rect.render.height;
 
-		if (dx * dx + dy * dy + dw * dw + dh * dh < SETTLE_DISTANCE_SQ) {
+		if (dx * dx + dy * dy + dw * dw + dh * dh < 0.01) {
 			this.#isSettled = true;
 			if (this.#target) this.#attachToTarget(this.#target);
 		}
@@ -170,7 +167,8 @@ export class SpavCursor {
 
 	#tick = (time: number) => {
 		const deltaTime = time - (this.#lastTime ?? time);
-		const progress = 1 - Math.exp(-SMOOTHING * deltaTime);
+		const speed = Math.min(Math.max(this.speed, 0.01), 1);
+		const progress = 1 - Math.pow(1 - speed, deltaTime / (1000 / 60));
 
 		this.#lastTime = time;
 		this.#scale.render = lerp(this.#scale.render, this.#scale.target, progress);
@@ -197,7 +195,7 @@ export class SpavCursor {
 
 		this.#render();
 
-		if (!this.#target && this.#scale.render < MIN_VISIBLE_SCALE) {
+		if (!this.#target && this.#scale.render < 0.01) {
 			this.#cursor.style.scale = '0';
 			this.#scale.render = 0;
 			this.#rafId = undefined;

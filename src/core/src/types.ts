@@ -103,6 +103,25 @@ export interface SpavOptions {
 }
 
 export interface SpavCursorOptions {
+	/**
+	 * Determines how quickly the cursor animates between targets.
+	 * Accepts a value in the range `0` (slowest) to `1` (instant).
+	 *
+	 * @default 0.25
+	 */
+	speed?: number;
+
+	/**
+	 * The amount of padding added around the cursor in pixels.
+	 *
+	 * @default 0
+	 */
 	padding?: number;
+
+	/**
+	 * Whether the cursor matches the border radius of its target.
+	 *
+	 * @default true
+	 */
 	matchRadius?: boolean;
 }
