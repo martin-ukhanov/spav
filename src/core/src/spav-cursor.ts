@@ -10,12 +10,8 @@ export class SpavCursor {
 	#cursor: HTMLElement;
 	#target: FocusableElement | undefined;
 
-	#renderRect: DOMRect;
-	#globalRect: DOMRect;
-
-	#currentScale: number;
-	#targetScale: number;
-
+	#rect: { render: DOMRect; global: DOMRect };
+	#scale: { current: number; target: number };
 	#isSettled: boolean;
 
 	#rafId: number | undefined;
@@ -35,12 +31,8 @@ export class SpavCursor {
 			willChange: 'translate, scale'
 		} as CSSStyleDeclaration);
 
-		this.#renderRect = new DOMRect();
-		this.#globalRect = new DOMRect();
-
-		this.#currentScale = 0;
-		this.#targetScale = 0;
-
+		this.#rect = { render: new DOMRect(), global: new DOMRect() };
+		this.#scale = { current: 0, target: 0 };
 		this.#isSettled = true;
 
 		window.addEventListener('focusin', this.#onFocusIn);
@@ -59,7 +51,7 @@ export class SpavCursor {
 			const isInit = !this.#target;
 
 			this.#target = target;
-			this.#targetScale = 1;
+			this.#scale.target = 1;
 
 			if (isInit) {
 				this.#isSettled = true;
@@ -77,7 +69,7 @@ export class SpavCursor {
 		if (!event.relatedTarget) {
 			this.#target = undefined;
 			this.#isSettled = true;
-			this.#targetScale = 0;
+			this.#scale.target = 0;
 		}
 	};
 
@@ -91,7 +83,7 @@ export class SpavCursor {
 
 	#attachToGlobal() {
 		if (this.#cursor.parentElement !== document.body) document.body.appendChild(this.#cursor);
-		copyRect(this.#renderRect, this.#globalRect);
+		copyRect(this.#rect.render, this.#rect.global);
 		this.#cursor.style.zIndex = String(MAX_Z_INDEX);
 	}
 
@@ -100,17 +92,17 @@ export class SpavCursor {
 		const targetY = rect.y + window.scrollY;
 
 		setRect(
-			this.#renderRect,
-			lerp(this.#renderRect.x, targetX, progress),
-			lerp(this.#renderRect.y, targetY, progress),
-			lerp(this.#renderRect.width, rect.width, progress),
-			lerp(this.#renderRect.height, rect.height, progress)
+			this.#rect.render,
+			lerp(this.#rect.render.x, targetX, progress),
+			lerp(this.#rect.render.y, targetY, progress),
+			lerp(this.#rect.render.width, rect.width, progress),
+			lerp(this.#rect.render.height, rect.height, progress)
 		);
 
-		const dx = targetX - this.#renderRect.x;
-		const dy = targetY - this.#renderRect.y;
-		const dw = rect.width - this.#renderRect.width;
-		const dh = rect.height - this.#renderRect.height;
+		const dx = targetX - this.#rect.render.x;
+		const dy = targetY - this.#rect.render.y;
+		const dw = rect.width - this.#rect.render.width;
+		const dh = rect.height - this.#rect.render.height;
 
 		if (dx * dx + dy * dy + dw * dw + dh * dh < SETTLE_DISTANCE_SQ) {
 			this.#isSettled = true;
@@ -133,10 +125,10 @@ export class SpavCursor {
 			y = rect.y + window.scrollY;
 		}
 
-		setRect(this.#renderRect, x, y, rect.width, rect.height);
+		setRect(this.#rect.render, x, y, rect.width, rect.height);
 
 		setRect(
-			this.#globalRect,
+			this.#rect.global,
 			rect.x + window.scrollX,
 			rect.y + window.scrollY,
 			rect.width,
@@ -146,10 +138,10 @@ export class SpavCursor {
 
 	#render() {
 		Object.assign(this.#cursor.style, {
-			width: `${this.#renderRect.width}px`,
-			height: `${this.#renderRect.height}px`,
-			translate: `${this.#renderRect.x}px ${this.#renderRect.y}px`,
-			scale: `${this.#currentScale}`
+			width: `${this.#rect.render.width}px`,
+			height: `${this.#rect.render.height}px`,
+			translate: `${this.#rect.render.x}px ${this.#rect.render.y}px`,
+			scale: `${this.#scale.current}`
 		} as CSSStyleDeclaration);
 	}
 
@@ -158,7 +150,7 @@ export class SpavCursor {
 		const progress = 1 - Math.exp(-SMOOTHING * deltaTime);
 
 		this.#lastTime = time;
-		this.#currentScale = lerp(this.#currentScale, this.#targetScale, progress);
+		this.#scale.current = lerp(this.#scale.current, this.#scale.target, progress);
 
 		if (this.#target) {
 			const rect = this.#target.getBoundingClientRect();
@@ -168,9 +160,9 @@ export class SpavCursor {
 
 		this.#render();
 
-		if (!this.#target && this.#currentScale < MIN_VISIBLE_SCALE) {
+		if (!this.#target && this.#scale.current < MIN_VISIBLE_SCALE) {
 			this.#cursor.style.scale = '0';
-			this.#currentScale = 0;
+			this.#scale.current = 0;
 			this.#rafId = undefined;
 			this.#lastTime = undefined;
 			return;
