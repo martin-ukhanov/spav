@@ -1,5 +1,5 @@
 {
-	"name": "core",
+	"name": "playground",
 	"private": true,
 	"type": "module",
 	"scripts": {
@@ -9,7 +9,7 @@
 	},
 	"devDependencies": {
 		"typescript": "~6.0.3",
-		"vite": "^8.0.14"
+		"vite": "^8.0.16"
 	},
 	"dependencies": {
 		"spav-js": "workspace:*"

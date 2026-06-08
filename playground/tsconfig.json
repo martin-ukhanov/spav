@@ -6,7 +6,7 @@
 		"types": ["vite/client"],
 		"skipLibCheck": true,
 		"paths": {
-			"spav-js": ["../../src/core/index.ts"]
+			"spav-js": ["../src/index.ts"]
 		},
 
 		/* Bundler mode */

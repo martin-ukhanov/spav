@@ -1,0 +1,339 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Spav | Core</title>
+		<style>
+			*:focus-visible {
+				outline: none !important;
+			}
+
+			[data-spav-cursor] {
+				border: 1px solid red;
+			}
+
+			:root {
+				--bg: #0e1116;
+				--panel: #161b22;
+				--panel-2: #1c2330;
+				--border: #2b3340;
+				--text: #c9d1d9;
+				--muted: #8b949e;
+				--accent: #58a6ff;
+				--accent-2: #3fb950;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				margin: 0;
+				padding: 24px;
+				font-family: system-ui, sans-serif;
+				background: var(--bg);
+				color: var(--text);
+				line-height: 1.5;
+			}
+
+			h1 {
+				margin: 0 0 4px;
+				font-size: 20px;
+			}
+
+			.hint {
+				margin: 0 0 24px;
+				color: var(--muted);
+				font-size: 14px;
+			}
+
+			.hint kbd {
+				background: var(--panel-2);
+				border: 1px solid var(--border);
+				border-radius: 4px;
+				padding: 1px 6px;
+				font-size: 12px;
+			}
+
+			section {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 16px;
+				margin-bottom: 20px;
+			}
+
+			section > h2 {
+				margin: 0 0 12px;
+				font-size: 14px;
+				font-weight: 600;
+				color: var(--muted);
+				text-transform: uppercase;
+				letter-spacing: 0.5px;
+			}
+
+			.row {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 10px;
+				align-items: center;
+			}
+
+			/* Focusable controls */
+			button,
+			a,
+			input,
+			select,
+			textarea,
+			.tile {
+				font: inherit;
+				color: var(--text);
+				background: var(--panel-2);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 8px 14px;
+				cursor: pointer;
+				text-decoration: none;
+
+				&:nth-child(3) {
+					animation: pulse 2s ease-in-out infinite alternate;
+					border-radius: 0 !important;
+				}
+			}
+
+			button:disabled {
+				opacity: 0.4;
+				cursor: not-allowed;
+			}
+
+			input,
+			select,
+			textarea {
+				cursor: text;
+			}
+
+			/* Strong, obvious focus ring driven by Spav (focusVisible) */
+			:focus-visible {
+				outline: 3px solid var(--accent);
+				outline-offset: 2px;
+				background: #1f6feb22;
+			}
+
+			/* Containers */
+			[data-spav-contain] {
+				border: 1px dashed var(--accent-2);
+				border-radius: 10px;
+				padding: 12px;
+			}
+
+			.contain-label {
+				font-size: 12px;
+				color: var(--accent-2);
+				margin-bottom: 10px;
+			}
+
+			/* Scrollers — position: relative so the cursor mounts inside and rides the scroll */
+			.scroller-h {
+				position: relative;
+				display: flex;
+				gap: 10px;
+				overflow-x: auto;
+				padding: 8px;
+				border: 1px solid var(--border);
+				border-radius: 8px;
+			}
+
+			.scroller-v {
+				position: relative;
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+				overflow-y: auto;
+				max-height: 180px;
+				padding: 8px;
+				border: 1px solid var(--border);
+				border-radius: 8px;
+			}
+
+			.tile {
+				display: grid;
+				place-items: center;
+				min-width: 120px;
+				height: 70px;
+				flex: 0 0 auto;
+				text-align: center;
+			}
+
+			.cols {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 20px;
+			}
+
+			/* Modal */
+			.modal-backdrop {
+				position: fixed;
+				inset: 0;
+				background: #000a;
+				display: none;
+				place-items: center;
+				z-index: 10;
+			}
+
+			.modal-backdrop[data-open] {
+				display: grid;
+			}
+
+			.modal {
+				position: relative;
+				width: min(420px, 90vw);
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				padding: 20px;
+			}
+
+			.modal h2 {
+				margin: 0 0 6px;
+				color: var(--text);
+				text-transform: none;
+				font-size: 18px;
+				letter-spacing: 0;
+			}
+
+			.modal p {
+				margin: 0 0 16px;
+				color: var(--muted);
+				font-size: 14px;
+			}
+
+			code {
+				background: var(--panel-2);
+				border: 1px solid var(--border);
+				border-radius: 4px;
+				padding: 1px 5px;
+				font-size: 12px;
+			}
+
+			@keyframes pulse {
+				from {
+					transform: scale(1) translateY(0px);
+				}
+
+				to {
+					transform: scale(2) translateY(0px);
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Spav playground</h1>
+		<p class="hint">
+			Navigate with <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> · blur with <kbd>Esc</kbd> ·
+			click anywhere to set the origin.
+		</p>
+
+		<!-- 1. Assorted focusable element types -->
+		<section>
+			<h2>Focusable elements</h2>
+			<div class="row">
+				<button>Button</button>
+				<a href="#">Anchor link</a>
+				<input type="text" placeholder="Text input" />
+				<input type="date" />
+				<input type="number" placeholder="Number" />
+				<select>
+					<option>Select</option>
+					<option>Option 2</option>
+				</select>
+				<label class="tile" style="min-width: auto; height: auto">
+					<input type="checkbox" style="width: auto" /> Checkbox
+				</label>
+				<button disabled>Disabled</button>
+				<button data-spav-ignore>Ignored (data-spav-ignore)</button>
+				<div tabindex="0" class="tile" style="min-width: auto; height: auto">tabindex div</div>
+			</div>
+		</section>
+
+		<!-- 1b. Editable elements: caret moves until it hits an edge -->
+		<section>
+			<h2>Editable (arrow within text, navigate at the edge)</h2>
+			<div class="row" style="align-items: stretch">
+				<textarea
+					rows="4"
+					cols="28"
+					placeholder="Multi-line textarea&#10;Arrow to an edge to leave"
+				>
+Line one
+Line two
+Line three
+Line four</textarea
+				>
+				<div
+					contenteditable="true"
+					class="tile"
+					style="min-width: 220px; height: auto; text-align: left; align-content: center"
+				>
+					Editable div — arrow to the start or end to navigate out.
+					<div>Hello</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- 2. Scoped navigation container -->
+		<section>
+			<h2>Container (data-spav-contain)</h2>
+			<div data-spav-contain>
+				<div class="contain-label">Navigation is scoped inside this box</div>
+				<div class="row">
+					<button>Contained A</button>
+					<button>Contained B</button>
+					<button>Contained C</button>
+					<button>Contained D</button>
+				</div>
+			</div>
+		</section>
+
+		<!-- 3. Scrollers -->
+		<section>
+			<h2>Scrollers</h2>
+
+			<div class="cols">
+				<div>
+					<div class="contain-label" style="color: var(--muted)">Horizontal</div>
+					<div class="scroller-h" id="scroller-h"></div>
+				</div>
+				<div>
+					<div class="contain-label" style="color: var(--muted)">Vertical</div>
+					<div class="scroller-v" id="scroller-v"></div>
+				</div>
+			</div>
+		</section>
+
+		<!-- 4. Modal -->
+		<section>
+			<h2>Modal</h2>
+			<div class="row">
+				<button id="open-modal">Open modal</button>
+				<span class="hint" style="margin: 0">
+					Background goes <code>inert</code>; navigation is trapped inside.
+				</span>
+			</div>
+		</section>
+
+		<div class="modal-backdrop" id="modal">
+			<div class="modal" data-spav-contain role="dialog" aria-modal="true">
+				<h2>Trapped modal</h2>
+				<p>Arrow keys stay inside. Press Esc or Close to dismiss.</p>
+				<div class="row">
+					<input type="text" placeholder="Focus me" />
+					<button>Confirm</button>
+					<button id="close-modal">Close</button>
+				</div>
+			</div>
+		</div>
+
+		<script type="module" src="/src/main.ts"></script>
+	</body>
+</html>

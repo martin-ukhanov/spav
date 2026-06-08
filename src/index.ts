@@ -1,4 +1,4 @@
-export { Spav } from './src/spav';
+export { Spav } from './spav';
 
 export type {
 	SpavDirection,
@@ -12,4 +12,4 @@ export type {
 	SpavFocusCallback,
 	SpavCursorOptions,
 	SpavOptions
-} from './src/types';
+} from './types';
