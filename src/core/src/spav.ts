@@ -569,10 +569,7 @@ export class Spav {
 			down: { top: amount }
 		};
 
-		container.scrollBy({
-			...offsets[direction],
-			behavior
-		});
+		container.scrollBy({ ...offsets[direction], behavior });
 	}
 
 	/**
