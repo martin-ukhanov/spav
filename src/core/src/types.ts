@@ -89,7 +89,7 @@ export interface SpavCursorOptions {
 	 *
 	 * @default true
 	 */
-	matchRadius?: boolean;
+	matchBorderRadius?: boolean;
 
 	/**
 	 * Whether to automatically run the `requestAnimationFrame` loop.
@@ -114,7 +114,7 @@ export interface SpavCursorApi {
 	/**
 	 * Whether the cursor matches the border radius of its target.
 	 */
-	matchRadius: boolean;
+	matchBorderRadius: boolean;
 
 	/**
 	 * Whether to automatically run the `requestAnimationFrame` loop.

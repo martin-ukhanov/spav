@@ -7,7 +7,7 @@ export class SpavCursor {
 
 	#rect: { render: DOMRect; global: DOMRect };
 	#scale: { render: number; target: number };
-	#radius: { render: number[]; target: number[] };
+	#borderRadius: { render: number[]; target: number[] };
 	#isSettled: boolean;
 
 	#rafId: number | undefined;
@@ -15,13 +15,13 @@ export class SpavCursor {
 
 	speed: number;
 	padding: number;
-	matchRadius: boolean;
+	matchBorderRadius: boolean;
 	autoRaf: boolean;
 
 	constructor({
 		speed = 0.25,
 		padding = 0,
-		matchRadius = true,
+		matchBorderRadius = true,
 		autoRaf = true
 	}: SpavCursorOptions = {}) {
 		this.#cursor = document.createElement('div');
@@ -35,16 +35,16 @@ export class SpavCursor {
 			pointerEvents: 'none',
 			scale: '0',
 			willChange: 'translate, scale'
-		} as CSSStyleDeclaration);
+		});
 
 		this.#rect = { render: new DOMRect(), global: new DOMRect() };
 		this.#scale = { render: 0, target: 0 };
-		this.#radius = { render: [0, 0, 0, 0], target: [0, 0, 0, 0] };
+		this.#borderRadius = { render: Array(8).fill(0), target: Array(8).fill(0) };
 		this.#isSettled = true;
 
 		this.speed = speed;
 		this.padding = padding;
-		this.matchRadius = matchRadius;
+		this.matchBorderRadius = matchBorderRadius;
 		this.autoRaf = autoRaf;
 
 		window.addEventListener('focusin', this.#onFocusIn);
@@ -66,8 +66,13 @@ export class SpavCursor {
 			this.#scale.target = 1;
 
 			if (isInit) {
-				if (this.matchRadius) {
-					this.#radius.render = this.#getRadius(getComputedStyle(target));
+				if (this.matchBorderRadius) {
+					const { width, height } = target.getBoundingClientRect();
+					this.#borderRadius.render = this.#getBorderRadius(
+						getComputedStyle(target),
+						width,
+						height
+					);
 				}
 
 				this.#isSettled = true;
@@ -89,15 +94,20 @@ export class SpavCursor {
 		}
 	};
 
-	#getRadius(style: CSSStyleDeclaration) {
+	#getBorderRadius(style: CSSStyleDeclaration, width: number, height: number) {
+		const resolve = (value: string, axis: number) => {
+			const r = value.endsWith('%') ? (parseFloat(value) / 100) * axis : parseFloat(value);
+			return r === 0 ? 0 : r + this.padding;
+		};
+
 		return [
 			style.borderTopLeftRadius,
 			style.borderTopRightRadius,
 			style.borderBottomRightRadius,
 			style.borderBottomLeftRadius
-		].map((value) => {
-			const r = parseFloat(value);
-			return r === 0 ? 0 : r + this.padding;
+		].flatMap((value) => {
+			const [h, v = h] = value.split(' ');
+			return [resolve(h, width), resolve(v, height)];
 		});
 	}
 
@@ -116,7 +126,7 @@ export class SpavCursor {
 			y: this.#rect.global.y,
 			width: this.#rect.global.width,
 			height: this.#rect.global.height
-		} as DOMRectInit);
+		});
 
 		this.#cursor.style.zIndex = '2147483647';
 	}
@@ -130,7 +140,7 @@ export class SpavCursor {
 			y: lerp(this.#rect.render.y, targetY, progress),
 			width: lerp(this.#rect.render.width, rect.width, progress),
 			height: lerp(this.#rect.render.height, rect.height, progress)
-		} as DOMRectInit);
+		});
 
 		const dx = targetX - this.#rect.render.x;
 		const dy = targetY - this.#rect.render.y;
@@ -161,27 +171,29 @@ export class SpavCursor {
 			y,
 			width: rect.width,
 			height: rect.height
-		} as DOMRectInit);
+		});
 
 		Object.assign(this.#rect.global, {
 			x: rect.x + window.scrollX,
 			y: rect.y + window.scrollY,
 			width: rect.width,
 			height: rect.height
-		} as DOMRectInit);
+		});
 	}
 
 	#render() {
 		const p = this.padding;
-		const [tl, tr, br, bl] = this.#radius.render;
+		const [tlh, tlv, trh, trv, brh, brv, blh, blv] = this.#borderRadius.render;
 
 		Object.assign(this.#cursor.style, {
 			width: `${this.#rect.render.width + p * 2}px`,
 			height: `${this.#rect.render.height + p * 2}px`,
 			translate: `${this.#rect.render.x - p}px ${this.#rect.render.y - p}px`,
-			borderRadius: this.matchRadius ? `${tl}px ${tr}px ${br}px ${bl}px` : '',
+			borderRadius: this.matchBorderRadius
+				? `${tlh}px ${trh}px ${brh}px ${blh}px / ${tlv}px ${trv}px ${brv}px ${blv}px`
+				: '',
 			scale: `${this.#scale.render}`
-		} as CSSStyleDeclaration);
+		});
 	}
 
 	raf: FrameRequestCallback = (time) => {
@@ -198,10 +210,10 @@ export class SpavCursor {
 			const rect = this.#target.getBoundingClientRect();
 			const style = getComputedStyle(this.#target);
 
-			if (this.matchRadius) {
-				this.#radius.target = this.#getRadius(style);
-				this.#radius.render = this.#radius.render.map((v, i) =>
-					lerp(v, this.#radius.target[i], progress)
+			if (this.matchBorderRadius) {
+				this.#borderRadius.target = this.#getBorderRadius(style, rect.width, rect.height);
+				this.#borderRadius.render = this.#borderRadius.render.map((v, i) =>
+					lerp(v, this.#borderRadius.target[i], progress)
 				);
 			}
 

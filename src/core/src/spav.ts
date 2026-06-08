@@ -67,11 +67,11 @@ export class Spav {
 					cursor.padding = value;
 				},
 
-				get matchRadius() {
-					return cursor.matchRadius;
+				get matchBorderRadius() {
+					return cursor.matchBorderRadius;
 				},
-				set matchRadius(value) {
-					cursor.matchRadius = value;
+				set matchBorderRadius(value) {
+					cursor.matchBorderRadius = value;
 				},
 
 				get autoRaf() {
