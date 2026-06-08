@@ -282,11 +282,19 @@ export class Spav {
 			return false;
 		}
 
-		if (element.tabIndex < 0 && !(element instanceof HTMLElement && element.isContentEditable)) {
+		if (
+			element instanceof HTMLElement &&
+			element.isContentEditable &&
+			element.contentEditable !== 'inherit'
+		) {
+			const tabIndex = element.getAttribute('tabindex');
+			if (tabIndex !== null && parseInt(tabIndex) < 0) return false;
+		} else if (element.tabIndex < 0) {
 			return false;
 		}
 
 		switch (element.tagName) {
+			case 'a':
 			case 'A':
 			case 'AREA':
 				if (!element.hasAttribute('href')) return false;
@@ -294,7 +302,10 @@ export class Spav {
 
 			case 'AUDIO':
 			case 'VIDEO':
-				if (!element.hasAttribute('controls')) return false;
+				if (!element.hasAttribute('controls')) {
+					const tabIndex = element.getAttribute('tabindex');
+					if (tabIndex === null || parseInt(tabIndex) < 0) return false;
+				}
 				break;
 		}
 
