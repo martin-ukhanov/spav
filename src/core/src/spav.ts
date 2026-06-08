@@ -336,20 +336,22 @@ export class Spav {
 			if (!visible) return false;
 		}
 
-		const centerX = visible.left + visible.width / 2;
-		const centerY = visible.top + visible.height / 2;
+		const center = {
+			x: visible.left + visible.width / 2,
+			y: visible.top + visible.height / 2
+		};
 
-		const left = Math.min(centerX, visible.left + 1);
-		const right = Math.max(centerX, visible.right - 1);
-		const top = Math.min(centerY, visible.top + 1);
-		const bottom = Math.max(centerY, visible.bottom - 1);
+		const left = Math.min(center.x, visible.left + 1);
+		const right = Math.max(center.x, visible.right - 1);
+		const top = Math.min(center.y, visible.top + 1);
+		const bottom = Math.max(center.y, visible.bottom - 1);
 
 		const points: { x: number; y: number }[] = [
-			{ x: centerX, y: centerY }, // Center
-			{ x: left, y: centerY }, // Left center
-			{ x: right, y: centerY }, // Right center
-			{ x: centerX, y: top }, // Top center
-			{ x: centerX, y: bottom }, // Bottom center
+			{ x: center.x, y: center.y }, // Center
+			{ x: left, y: center.y }, // Left center
+			{ x: right, y: center.y }, // Right center
+			{ x: center.x, y: top }, // Top center
+			{ x: center.x, y: bottom }, // Bottom center
 			{ x: left, y: top }, // Top left
 			{ x: right, y: top }, // Top right
 			{ x: left, y: bottom }, // Bottom left
