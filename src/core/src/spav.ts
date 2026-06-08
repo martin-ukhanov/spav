@@ -344,7 +344,7 @@ export class Spav {
 		const top = Math.min(centerY, visible.top + 1);
 		const bottom = Math.max(centerY, visible.bottom - 1);
 
-		const testPoints = [
+		const points: { x: number; y: number }[] = [
 			{ x: centerX, y: centerY }, // Center
 			{ x: left, y: centerY }, // Left center
 			{ x: right, y: centerY }, // Right center
@@ -356,7 +356,7 @@ export class Spav {
 			{ x: right, y: bottom } // Bottom right
 		];
 
-		for (const { x, y } of testPoints) {
+		for (const { x, y } of points) {
 			const topElement = document.elementFromPoint(x, y);
 			if (element.contains(topElement)) return true;
 		}
