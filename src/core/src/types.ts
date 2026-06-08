@@ -99,28 +99,7 @@ export interface SpavCursorOptions {
 	autoRaf?: boolean;
 }
 
-export interface SpavCursorApi {
-	/**
-	 * Determines how quickly the cursor animates between targets.
-	 * Accepts a value in the range `0` (slowest) to `1` (instant).
-	 */
-	speed: number;
-
-	/**
-	 * The amount of padding added around the cursor in pixels.
-	 */
-	padding: number;
-
-	/**
-	 * Whether the cursor matches the border radius of its target.
-	 */
-	matchBorderRadius: boolean;
-
-	/**
-	 * Whether to automatically run the `requestAnimationFrame` loop.
-	 */
-	autoRaf: boolean;
-
+export interface SpavCursorApi extends Required<SpavCursorOptions> {
 	/**
 	 * Advances the cursor by one frame. Must be called every frame when `autoRaf` is disabled.
 	 */
