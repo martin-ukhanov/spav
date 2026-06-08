@@ -6,7 +6,6 @@ import type { FocusableElement, SpavDirection } from './types';
  * @param a - The starting value.
  * @param b - The ending value.
  * @param t - The interpolation factor.
- *
  * @returns The interpolated value.
  */
 export function lerp(a: number, b: number, t: number) {
