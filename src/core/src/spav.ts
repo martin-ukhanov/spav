@@ -48,47 +48,34 @@ export class Spav {
 	set cursor(value: boolean | SpavCursorOptions) {
 		this.#cursor?.destroy();
 
-		if (value) {
-			const cursor = new SpavCursor(value === true ? undefined : value);
-			this.#cursor = cursor;
-
-			this.#cursorApi = {
-				get speed() {
-					return cursor.speed;
-				},
-				set speed(value) {
-					cursor.speed = value;
-				},
-
-				get padding() {
-					return cursor.padding;
-				},
-				set padding(value) {
-					cursor.padding = value;
-				},
-
-				get matchBorderRadius() {
-					return cursor.matchBorderRadius;
-				},
-				set matchBorderRadius(value) {
-					cursor.matchBorderRadius = value;
-				},
-
-				get autoRaf() {
-					return cursor.autoRaf;
-				},
-				set autoRaf(value) {
-					cursor.autoRaf = value;
-				},
-
-				get raf() {
-					return cursor.raf;
-				}
-			};
-		} else {
+		if (!value) {
 			this.#cursor = undefined;
 			this.#cursorApi = undefined;
+			return;
 		}
+
+		const cursor = new SpavCursor(value === true ? undefined : value);
+		this.#cursor = cursor;
+
+		const CURSOR_API_WRITABLE: Record<keyof SpavCursorApi, boolean> = {
+			speed: true,
+			padding: true,
+			matchBorderRadius: true,
+			autoRaf: true,
+			raf: false
+		};
+
+		const cursorApi = {} as SpavCursorApi;
+
+		for (const key of Object.keys(CURSOR_API_WRITABLE) as (keyof SpavCursorApi)[]) {
+			Object.defineProperty(cursorApi, key, {
+				enumerable: true,
+				get: () => cursor[key],
+				set: CURSOR_API_WRITABLE[key] ? (value) => Reflect.set(cursor, key, value) : undefined
+			});
+		}
+
+		this.#cursorApi = cursorApi;
 	}
 
 	constructor({
