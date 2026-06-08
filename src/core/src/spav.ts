@@ -277,8 +277,7 @@ export class Spav {
 			!element.isConnected ||
 			element === document.documentElement ||
 			element === document.body ||
-			!isFocusableElement(element) ||
-			element.hasAttribute('data-spav-ignore')
+			!isFocusableElement(element)
 		) {
 			return false;
 		}
@@ -299,7 +298,7 @@ export class Spav {
 				break;
 		}
 
-		if (element.matches(':disabled') || element.closest('[inert]')) {
+		if (element.matches(':disabled') || element.closest('[inert], [data-spav-ignore]')) {
 			return false;
 		}
 
