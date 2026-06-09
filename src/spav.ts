@@ -96,7 +96,7 @@ export class Spav {
 
 		window.addEventListener('keydown', this.#onKeyDown);
 		window.addEventListener('focusout', this.#onFocusOut);
-		document.addEventListener('mouseup', this.#onMouseUp);
+		document.addEventListener('pointerup', this.#onPointerUp);
 	}
 
 	#onKeyDown = (event: KeyboardEvent) => {
@@ -143,7 +143,7 @@ export class Spav {
 		this.#origin = { element: target, rect: target.getBoundingClientRect() };
 	};
 
-	#onMouseUp = (event: MouseEvent) => {
+	#onPointerUp = (event: PointerEvent) => {
 		this.#origin = { rect: new DOMRect(event.clientX, event.clientY) };
 		this.#activeScrollContainer = undefined;
 	};
@@ -763,6 +763,6 @@ export class Spav {
 
 		window.removeEventListener('keydown', this.#onKeyDown);
 		window.removeEventListener('focusout', this.#onFocusOut);
-		document.removeEventListener('mouseup', this.#onMouseUp);
+		document.removeEventListener('pointerup', this.#onPointerUp);
 	}
 }
