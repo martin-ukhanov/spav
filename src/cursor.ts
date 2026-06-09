@@ -5,10 +5,13 @@ export class SpavCursor {
 	#cursor: HTMLElement;
 	#target: FocusableElement | undefined;
 
-	#rect: { render: DOMRect; global: DOMRect; last?: DOMRect };
-	#scale: { render: number; target: number };
-	#borderRadius: { render: number[]; target: number[] };
+	#rect: { current: DOMRect; last?: DOMRect };
+	#scale: { current: number; target: number };
+	#borderRadius: { current: number[]; target: number[] };
+
 	#isSettled: boolean;
+	#isIntersecting: boolean;
+	#observer: IntersectionObserver;
 
 	#rafId: number | undefined;
 	#lastTime: number | undefined;
@@ -29,24 +32,29 @@ export class SpavCursor {
 		this.#cursor.ariaHidden = 'true';
 
 		Object.assign(this.#cursor.style, {
-			position: 'absolute',
+			position: 'fixed',
 			top: '0',
 			left: '0',
+			zIndex: '2147483647',
 			pointerEvents: 'none',
 			scale: '0',
 			willChange: 'translate, scale'
 		});
 
-		this.#rect = { render: new DOMRect(), global: new DOMRect() };
-		this.#scale = { render: 0, target: 0 };
-		this.#borderRadius = { render: Array(8).fill(0), target: Array(8).fill(0) };
+		this.#rect = { current: new DOMRect() };
+		this.#scale = { current: 0, target: 0 };
+		this.#borderRadius = { current: Array(8).fill(0), target: Array(8).fill(0) };
+
 		this.#isSettled = true;
+		this.#isIntersecting = true;
+		this.#observer = new IntersectionObserver(this.#onIntersect);
 
 		this.speed = speed;
 		this.padding = padding;
 		this.matchBorderRadius = matchBorderRadius;
 		this.autoRaf = autoRaf;
 
+		document.body.append(this.#cursor);
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
 	}
@@ -63,32 +71,53 @@ export class SpavCursor {
 			const isInit = !this.#target;
 
 			this.#target = target;
-			this.#scale.target = 1;
 			this.#rect.last = undefined;
+			this.#scale.target = 1;
+
+			this.#isIntersecting = true;
+			this.#observer.disconnect();
+			this.#observer.observe(target);
 
 			if (isInit) {
-				if (this.matchBorderRadius) {
-					this.#borderRadius.render = this.#getBorderRadius(target);
-				}
-
 				this.#isSettled = true;
-				this.#attachToTarget(target);
+
+				if (this.matchBorderRadius) {
+					this.#borderRadius.current = this.#getBorderRadius(target);
+				}
 			} else if (this.#isSettled) {
 				this.#isSettled = false;
-				this.#attachToGlobal();
 			}
 
 			if (this.autoRaf) {
 				this.#rafId ??= requestAnimationFrame(this.raf);
 			}
+		} else if (this.#target) {
+			this.#hide();
 		}
 	};
 
 	#onFocusOut = (event: FocusEvent) => {
-		if (!event.relatedTarget) {
-			this.#target = undefined;
-			this.#isSettled = true;
-			this.#scale.target = 0;
+		if (!event.relatedTarget) this.#hide();
+	};
+
+	#onIntersect: IntersectionObserverCallback = (entries) => {
+		for (const entry of entries) {
+			if (entry.target !== this.#target) continue;
+
+			const wasIntersecting = this.#isIntersecting;
+			this.#isIntersecting = entry.isIntersecting;
+			this.#scale.target = entry.isIntersecting ? 1 : 0;
+
+			if (entry.isIntersecting) {
+				if (!wasIntersecting) {
+					this.#rect.last = undefined;
+					this.#isSettled = true;
+				}
+
+				if (this.autoRaf) {
+					this.#rafId ??= requestAnimationFrame(this.raf);
+				}
+			}
 		}
 	};
 
@@ -121,125 +150,89 @@ export class SpavCursor {
 		});
 	}
 
-	#attachToTarget(target: Element) {
-		const parent = (target instanceof HTMLElement ? target.offsetParent : null) ?? document.body;
-		if (this.#cursor.parentElement !== parent) parent.appendChild(this.#cursor);
-	}
-
-	#attachToGlobal() {
-		if (this.#cursor.parentElement !== document.body) {
-			document.body.appendChild(this.#cursor);
-		}
-
-		Object.assign(this.#rect.render, {
-			x: this.#rect.global.x,
-			y: this.#rect.global.y,
-			width: this.#rect.global.width,
-			height: this.#rect.global.height
-		});
-
-		this.#cursor.style.zIndex = '2147483647';
-	}
-
 	#moveTo(rect: DOMRect, progress: number) {
-		const target = {
-			x: rect.x + window.scrollX,
-			y: rect.y + window.scrollY
-		};
+		const { x, y, width, height } = rect;
 
 		const velocity = this.#rect.last
 			? new DOMRect(
-					target.x - this.#rect.last.x,
-					target.y - this.#rect.last.y,
-					rect.width - this.#rect.last.width,
-					rect.height - this.#rect.last.height
+					x - this.#rect.last.x,
+					y - this.#rect.last.y,
+					width - this.#rect.last.width,
+					height - this.#rect.last.height
 				)
 			: new DOMRect();
 
-		this.#rect.last = new DOMRect(target.x, target.y, rect.width, rect.height);
+		this.#rect.last = rect;
 
-		Object.assign(this.#rect.render, {
-			x: lerp(this.#rect.render.x, target.x, progress) + velocity.x,
-			y: lerp(this.#rect.render.y, target.y, progress) + velocity.y,
-			width: lerp(this.#rect.render.width, rect.width, progress) + velocity.width,
-			height: lerp(this.#rect.render.height, rect.height, progress) + velocity.height
+		Object.assign(this.#rect.current, {
+			x: lerp(this.#rect.current.x, x, progress) + velocity.x,
+			y: lerp(this.#rect.current.y, y, progress) + velocity.y,
+			width: lerp(this.#rect.current.width, width, progress) + velocity.width,
+			height: lerp(this.#rect.current.height, height, progress) + velocity.height
 		});
 
 		if (this.matchBorderRadius) {
-			this.#borderRadius.render = this.#borderRadius.render.map((value, i) =>
+			this.#borderRadius.current = this.#borderRadius.current.map((value, i) =>
 				lerp(value, this.#borderRadius.target[i], progress)
 			);
 		}
 
-		const dx = target.x - this.#rect.render.x;
-		const dy = target.y - this.#rect.render.y;
-		const dw = rect.width - this.#rect.render.width;
-		const dh = rect.height - this.#rect.render.height;
+		const dx = x - this.#rect.current.x;
+		const dy = y - this.#rect.current.y;
+		const dw = width - this.#rect.current.width;
+		const dh = height - this.#rect.current.height;
 
 		if (dx * dx + dy * dy + dw * dw + dh * dh < 0.01) {
 			this.#isSettled = true;
-			if (this.#target) this.#attachToTarget(this.#target);
 		}
 	}
 
 	#snapTo(rect: DOMRect) {
-		const parent = this.#cursor.offsetParent;
-		let x: number, y: number;
-
-		if (parent && parent !== document.documentElement && parent !== document.body) {
-			const parentRect = parent.getBoundingClientRect();
-			x = rect.x - parentRect.x - parent.clientLeft + parent.scrollLeft;
-			y = rect.y - parentRect.y - parent.clientTop + parent.scrollTop;
-		} else {
-			x = rect.x + window.scrollX;
-			y = rect.y + window.scrollY;
-		}
-
-		Object.assign(this.#rect.render, {
-			x,
-			y,
-			width: rect.width,
-			height: rect.height
-		});
-
-		Object.assign(this.#rect.global, {
-			x: rect.x + window.scrollX,
-			y: rect.y + window.scrollY,
+		Object.assign(this.#rect.current, {
+			x: rect.x,
+			y: rect.y,
 			width: rect.width,
 			height: rect.height
 		});
 
 		if (this.matchBorderRadius) {
-			this.#borderRadius.render = [...this.#borderRadius.target];
+			this.#borderRadius.current = [...this.#borderRadius.target];
 		}
 	}
 
 	#render() {
 		const p = this.padding;
-		const [tlh, tlv, trh, trv, brh, brv, blh, blv] = this.#borderRadius.render;
+		const [tlh, tlv, trh, trv, brh, brv, blh, blv] = this.#borderRadius.current;
 
 		Object.assign(this.#cursor.style, {
-			width: `${this.#rect.render.width + p * 2}px`,
-			height: `${this.#rect.render.height + p * 2}px`,
-			translate: `${this.#rect.render.x - p}px ${this.#rect.render.y - p}px`,
+			width: `${this.#rect.current.width + p * 2}px`,
+			height: `${this.#rect.current.height + p * 2}px`,
+			translate: `${this.#rect.current.x - p}px ${this.#rect.current.y - p}px`,
 			borderRadius: this.matchBorderRadius
 				? `${tlh}px ${trh}px ${brh}px ${blh}px / ${tlv}px ${trv}px ${brv}px ${blv}px`
 				: '',
-			scale: `${this.#scale.render}`
+			scale: `${this.#scale.current}`
 		});
 	}
 
+	#hide() {
+		this.#target = undefined;
+		this.#isSettled = true;
+		this.#scale.target = 0;
+		this.#observer.disconnect();
+	}
+
 	raf: FrameRequestCallback = (time) => {
-		if (!this.#target && this.#scale.render === 0) return;
+		if ((!this.#target || !this.#isIntersecting) && this.#scale.current === 0) return;
 
 		const deltaTime = time - (this.#lastTime ?? time);
 		const speed = Math.min(Math.max(this.speed, 0.01), 1);
 		const progress = 1 - Math.pow(1 - speed, deltaTime / (1000 / 60));
 
 		this.#lastTime = time;
-		this.#scale.render = lerp(this.#scale.render, this.#scale.target, progress);
+		this.#scale.current = lerp(this.#scale.current, this.#scale.target, progress);
 
-		if (this.#target) {
+		if (this.#target && this.#isIntersecting) {
 			const style = getComputedStyle(this.#target);
 			const rect = this.#target.getBoundingClientRect();
 
@@ -248,19 +241,14 @@ export class SpavCursor {
 			}
 
 			if (!this.#isSettled) this.#moveTo(rect, progress);
-
-			if (this.#isSettled) {
-				const { zIndex } = style;
-				this.#cursor.style.zIndex = zIndex !== 'auto' ? zIndex : '';
-				this.#snapTo(rect);
-			}
+			if (this.#isSettled) this.#snapTo(rect);
 		}
 
 		this.#render();
 
-		if (!this.#target && this.#scale.render < 0.01) {
+		if ((!this.#target || !this.#isIntersecting) && this.#scale.current < 0.01) {
 			this.#cursor.style.scale = '0';
-			this.#scale.render = 0;
+			this.#scale.current = 0;
 			this.#rafId = undefined;
 			this.#lastTime = undefined;
 			return;
@@ -277,6 +265,7 @@ export class SpavCursor {
 			this.#rafId = undefined;
 		}
 
+		this.#observer.disconnect();
 		this.#cursor.remove();
 		window.removeEventListener('focusin', this.#onFocusIn);
 		window.removeEventListener('focusout', this.#onFocusOut);
