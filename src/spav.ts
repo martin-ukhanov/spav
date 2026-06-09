@@ -1,6 +1,7 @@
 import { SpavCursor } from './cursor';
 
 import {
+	getExplicitTabIndex,
 	isScrollContainer,
 	canScroll,
 	isFocusableElement,
@@ -274,8 +275,8 @@ export class Spav {
 			element.isContentEditable &&
 			element.contentEditable !== 'inherit'
 		) {
-			const tabIndex = element.getAttribute('tabindex');
-			if (tabIndex !== null && parseInt(tabIndex) < 0) return false;
+			const tabIndex = getExplicitTabIndex(element);
+			if (tabIndex && tabIndex < 0) return false;
 		} else if (element.tabIndex < 0) {
 			return false;
 		}
@@ -290,8 +291,8 @@ export class Spav {
 			case 'AUDIO':
 			case 'VIDEO':
 				if (!element.hasAttribute('controls')) {
-					const tabIndex = element.getAttribute('tabindex');
-					if (tabIndex === null || parseInt(tabIndex) < 0) return false;
+					const tabIndex = getExplicitTabIndex(element);
+					if (tabIndex && tabIndex < 0) return false;
 				}
 				break;
 		}

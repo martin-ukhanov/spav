@@ -1,4 +1,4 @@
-import { lerp, isFocusableElement } from './utils';
+import { lerp, setRect, setStyle, isFocusableElement } from './utils';
 import type { FocusableElement, SpavCursorOptions } from './types';
 
 export class SpavCursor {
@@ -31,7 +31,7 @@ export class SpavCursor {
 		this.#cursor.dataset.spavCursor = '';
 		this.#cursor.ariaHidden = 'true';
 
-		Object.assign(this.#cursor.style, {
+		setStyle(this.#cursor, {
 			position: 'fixed',
 			top: '0',
 			left: '0',
@@ -164,7 +164,7 @@ export class SpavCursor {
 
 		this.#rect.last = rect;
 
-		Object.assign(this.#rect.current, {
+		setRect(this.#rect.current, {
 			x: lerp(this.#rect.current.x, x, progress) + velocity.x,
 			y: lerp(this.#rect.current.y, y, progress) + velocity.y,
 			width: lerp(this.#rect.current.width, width, progress) + velocity.width,
@@ -188,12 +188,7 @@ export class SpavCursor {
 	}
 
 	#snapTo(rect: DOMRect) {
-		Object.assign(this.#rect.current, {
-			x: rect.x,
-			y: rect.y,
-			width: rect.width,
-			height: rect.height
-		});
+		setRect(this.#rect.current, rect);
 
 		if (this.matchBorderRadius) {
 			this.#borderRadius.current = [...this.#borderRadius.target];
@@ -204,7 +199,7 @@ export class SpavCursor {
 		const p = this.padding;
 		const [tlh, tlv, trh, trv, brh, brv, blh, blv] = this.#borderRadius.current;
 
-		Object.assign(this.#cursor.style, {
+		setStyle(this.#cursor, {
 			width: `${this.#rect.current.width + p * 2}px`,
 			height: `${this.#rect.current.height + p * 2}px`,
 			translate: `${this.#rect.current.x - p}px ${this.#rect.current.y - p}px`,
@@ -247,7 +242,7 @@ export class SpavCursor {
 		this.#render();
 
 		if ((!this.#target || !this.#isIntersecting) && this.#scale.current < 0.01) {
-			this.#cursor.style.scale = '0';
+			setStyle(this.#cursor, { scale: '0' });
 			this.#scale.current = 0;
 			this.#rafId = undefined;
 			this.#lastTime = undefined;

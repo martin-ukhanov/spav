@@ -13,6 +13,42 @@ export function lerp(a: number, b: number, t: number) {
 }
 
 /**
+ * Mutates a `DOMRect` in place to match the given values.
+ *
+ * @param rect - The rectangle to update.
+ * @param value - The `x`, `y`, `width`, and `height` to copy onto the rectangle.
+ */
+export function setRect(rect: DOMRect, value: DOMRectInit) {
+	Object.assign(rect, {
+		x: value.x,
+		y: value.y,
+		width: value.width,
+		height: value.height
+	} as DOMRectInit);
+}
+
+/**
+ * Gets the `tabindex` value explicitly set on an element via its attribute,
+ *
+ * @param element - The element to check.
+ * @returns The parsed `tabindex` value, or `undefined` if the attribute is absent.
+ */
+export function getExplicitTabIndex(element: Element) {
+	const tabIndex = element.getAttribute('tabindex');
+	return tabIndex ? parseInt(tabIndex) : undefined;
+}
+
+/**
+ * Applies a set of inline styles to an element.
+ *
+ * @param element - The element to style.
+ * @param style - An object of CSS properties to assign to the element's inline style.
+ */
+export function setStyle(element: HTMLElement, style: Partial<CSSStyleDeclaration>) {
+	Object.assign(element.style, style);
+}
+
+/**
  * Determines if an element is a scroll container by checking for content overflow
  * and scrollable computed styles. The document root is evaluated on overflow alone.
  *
