@@ -86,7 +86,7 @@ spav.indicator = { speed: 0.5 };
 Reading `spav.indicator` returns the live indicator API (or `undefined` when the indicator is disabled). Its `speed`, `padding`, `matchBorderRadius`, and `autoRaf` properties can be tweaked in place, and it exposes a read-only `raf` callback (see [Custom RAF loop](#custom-raf-loop)):
 
 ```ts
-if (spav.indicator) spav.indicator.speed = 0.4;
+if (spav.indicator) spav.indicator.speed = 0.5;
 ```
 
 ## Methods
@@ -99,19 +99,21 @@ if (spav.indicator) spav.indicator.speed = 0.4;
 
 ## Custom RAF Loop
 
-By default the indicator runs its own `requestAnimationFrame` loop, starting and stopping it as needed. If your app already drives a frame loop (e.g. alongside a smooth-scroll library, GSAP ticker, or WebGL renderer), disable `autoRaf` and advance the indicator yourself by calling `raf` every frame with the current time:
+By default the indicator runs its own `requestAnimationFrame` loop, starting and stopping it as needed. If your app already drives a frame loop (e.g. GSAP ticker, WebGL renderer), disable `autoRaf` and advance the indicator yourself by calling `raf` every frame with the current time:
 
 ```ts
 import { Spav } from 'spav-js';
 
-const spav = new Spav({ indicator: { autoRaf: false } });
+const spav = new Spav({
+	indicator: { autoRaf: false }
+});
 
-function frame(time: number) {
+function raf(time: number) {
 	spav.indicator?.raf(time);
-	requestAnimationFrame(frame);
+	requestAnimationFrame(raf);
 }
 
-requestAnimationFrame(frame);
+requestAnimationFrame(raf);
 ```
 
 ## Data Attributes
