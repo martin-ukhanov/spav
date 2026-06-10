@@ -138,10 +138,8 @@ export class SpavIndicator {
 	};
 
 	#getBorderRadius(element: FocusableElement, style?: CSSStyleDeclaration, rect?: DOMRect) {
-		const resolve = (value: string, axis: number, scale: number) => {
-			const r = value.endsWith('%') ? (parseFloat(value) / 100) * axis : parseFloat(value) * scale;
-			return r === 0 ? 0 : r + this.padding;
-		};
+		const resolve = (value: string, axis: number, scale: number) =>
+			value.endsWith('%') ? (parseFloat(value) / 100) * axis : parseFloat(value) * scale;
 
 		if (!style) style = getComputedStyle(element);
 		if (!rect) rect = element.getBoundingClientRect();
@@ -155,7 +153,7 @@ export class SpavIndicator {
 			scaleX = scaleY = 1;
 		}
 
-		return [
+		const [tlh, tlv, trh, trv, brh, brv, blh, blv] = [
 			style.borderTopLeftRadius,
 			style.borderTopRightRadius,
 			style.borderBottomRightRadius,
@@ -164,6 +162,18 @@ export class SpavIndicator {
 			const [h, v = h] = value.split(' ');
 			return [resolve(h, rect.width, scaleX), resolve(v, rect.height, scaleY)];
 		});
+
+		const factor = Math.min(
+			1,
+			rect.width / (tlh + trh),
+			rect.width / (blh + brh),
+			rect.height / (tlv + blv),
+			rect.height / (trv + brv)
+		);
+
+		return [tlh, tlv, trh, trv, brh, brv, blh, blv].map((r) =>
+			r === 0 ? 0 : r * factor + this.padding
+		);
 	}
 
 	#moveTo(rect: DOMRect, progress: number) {
