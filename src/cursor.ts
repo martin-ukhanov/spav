@@ -11,6 +11,8 @@ export class SpavCursor {
 
 	#isSettled: boolean;
 	#isIntersecting: boolean;
+	#isPointer: boolean;
+
 	#observer: IntersectionObserver;
 
 	#rafId: number | undefined;
@@ -47,6 +49,8 @@ export class SpavCursor {
 
 		this.#isSettled = true;
 		this.#isIntersecting = true;
+		this.#isPointer = false;
+
 		this.#observer = new IntersectionObserver(this.#onIntersect);
 
 		this.speed = speed;
@@ -55,14 +59,18 @@ export class SpavCursor {
 		this.autoRaf = autoRaf;
 
 		document.body.append(this.#cursor);
+
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
+		window.addEventListener('pointerdown', this.#onPointerDown, true);
+		window.addEventListener('keydown', this.#onKeyDown, true);
 	}
 
 	#onFocusIn = (event: FocusEvent) => {
 		const { target } = event;
 
 		if (
+			!this.#isPointer &&
 			target instanceof Element &&
 			target !== document.body &&
 			isFocusableElement(target) &&
@@ -98,6 +106,14 @@ export class SpavCursor {
 
 	#onFocusOut = (event: FocusEvent) => {
 		if (!event.relatedTarget) this.#hide();
+	};
+
+	#onPointerDown = () => {
+		this.#isPointer = true;
+	};
+
+	#onKeyDown = () => {
+		this.#isPointer = false;
 	};
 
 	#onIntersect: IntersectionObserverCallback = (entries) => {
@@ -262,7 +278,10 @@ export class SpavCursor {
 
 		this.#observer.disconnect();
 		this.#cursor.remove();
+
 		window.removeEventListener('focusin', this.#onFocusIn);
 		window.removeEventListener('focusout', this.#onFocusOut);
+		window.removeEventListener('pointerdown', this.#onPointerDown, true);
+		window.removeEventListener('keydown', this.#onKeyDown, true);
 	}
 }
