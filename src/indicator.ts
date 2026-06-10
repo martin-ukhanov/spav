@@ -5,9 +5,9 @@ export class SpavIndicator {
 	#indicator: HTMLElement;
 	#target: FocusableElement | undefined;
 
-	#rect: { current: DOMRect; last?: DOMRect };
+	#rect: { current: DOMRect; offset?: DOMRect };
+	#borderRadius: { current: number[]; offset?: number[] };
 	#scale: { current: number; target: number };
-	#borderRadius: { current: number[]; target: number[] };
 
 	#isSettled: boolean;
 	#isIntersecting: boolean;
@@ -44,8 +44,8 @@ export class SpavIndicator {
 		});
 
 		this.#rect = { current: new DOMRect() };
+		this.#borderRadius = { current: Array(8).fill(0) };
 		this.#scale = { current: 0, target: 0 };
-		this.#borderRadius = { current: Array(8).fill(0), target: Array(8).fill(0) };
 
 		this.#isSettled = true;
 		this.#isIntersecting = true;
@@ -79,7 +79,8 @@ export class SpavIndicator {
 			const isInit = !this.#target;
 
 			this.#target = target;
-			this.#rect.last = undefined;
+			this.#rect.offset = undefined;
+			this.#borderRadius.offset = undefined;
 			this.#scale.target = 1;
 
 			this.#isIntersecting = true;
@@ -88,17 +89,12 @@ export class SpavIndicator {
 
 			if (isInit) {
 				this.#isSettled = true;
-
-				if (this.matchBorderRadius) {
-					this.#borderRadius.current = this.#getBorderRadius(target);
-				}
+				if (this.matchBorderRadius) this.#borderRadius.current = this.#getBorderRadius(target);
 			} else if (this.#isSettled) {
 				this.#isSettled = false;
 			}
 
-			if (this.autoRaf) {
-				this.#rafId ??= requestAnimationFrame(this.raf);
-			}
+			if (this.autoRaf) this.#rafId ??= requestAnimationFrame(this.raf);
 		} else if (this.#target) {
 			this.#hide();
 		}
@@ -126,22 +122,21 @@ export class SpavIndicator {
 
 			if (entry.isIntersecting) {
 				if (!wasIntersecting) {
-					this.#rect.last = undefined;
+					this.#rect.offset = undefined;
+					this.#borderRadius.offset = undefined;
 					this.#isSettled = true;
 				}
 
-				if (this.autoRaf) {
-					this.#rafId ??= requestAnimationFrame(this.raf);
-				}
+				if (this.autoRaf) this.#rafId ??= requestAnimationFrame(this.raf);
 			}
 		}
 	};
 
-	#getBorderRadius(element: FocusableElement, style?: CSSStyleDeclaration, rect?: DOMRect) {
+	#getBorderRadius(element: FocusableElement, rect?: DOMRect) {
 		const resolve = (value: string, axis: number, scale: number) =>
 			value.endsWith('%') ? (parseFloat(value) / 100) * axis : parseFloat(value) * scale;
 
-		if (!style) style = getComputedStyle(element);
+		const style = getComputedStyle(element);
 		if (!rect) rect = element.getBoundingClientRect();
 
 		let scaleX: number, scaleY: number;
@@ -176,49 +171,45 @@ export class SpavIndicator {
 		);
 	}
 
-	#moveTo(rect: DOMRect, progress: number) {
-		const { x, y, width, height } = rect;
+	#moveTo(rect: DOMRect, borderRadius: number[] | undefined, progress: number) {
+		const rectOffset = (this.#rect.offset ??= new DOMRect(
+			this.#rect.current.x - rect.x,
+			this.#rect.current.y - rect.y,
+			this.#rect.current.width - rect.width,
+			this.#rect.current.height - rect.height
+		));
 
-		const velocity = this.#rect.last
-			? new DOMRect(
-					x - this.#rect.last.x,
-					y - this.#rect.last.y,
-					width - this.#rect.last.width,
-					height - this.#rect.last.height
-				)
-			: new DOMRect();
-
-		this.#rect.last = rect;
-
-		setRect(this.#rect.current, {
-			x: lerp(this.#rect.current.x, x, progress) + velocity.x,
-			y: lerp(this.#rect.current.y, y, progress) + velocity.y,
-			width: lerp(this.#rect.current.width, width, progress) + velocity.width,
-			height: lerp(this.#rect.current.height, height, progress) + velocity.height
+		setRect(rectOffset, {
+			x: lerp(rectOffset.x, 0, progress),
+			y: lerp(rectOffset.y, 0, progress),
+			width: lerp(rectOffset.width, 0, progress),
+			height: lerp(rectOffset.height, 0, progress)
 		});
 
-		if (this.matchBorderRadius) {
-			this.#borderRadius.current = this.#borderRadius.current.map((value, i) =>
-				lerp(value, this.#borderRadius.target[i], progress)
-			);
+		setRect(this.#rect.current, {
+			x: rect.x + rectOffset.x,
+			y: rect.y + rectOffset.y,
+			width: rect.width + rectOffset.width,
+			height: rect.height + rectOffset.height
+		});
+
+		if (borderRadius) {
+			const borderRadiusOffset = (
+				this.#borderRadius.offset ??
+				this.#borderRadius.current.map((value, i) => value - borderRadius[i])
+			).map((value) => lerp(value, 0, progress));
+
+			this.#borderRadius.offset = borderRadiusOffset;
+			this.#borderRadius.current = borderRadius.map((value, i) => value + borderRadiusOffset[i]);
 		}
 
-		const dx = x - this.#rect.current.x;
-		const dy = y - this.#rect.current.y;
-		const dw = width - this.#rect.current.width;
-		const dh = height - this.#rect.current.height;
-
-		if (dx * dx + dy * dy + dw * dw + dh * dh < 0.01) {
-			this.#isSettled = true;
-		}
+		const { x, y, width: w, height: h } = rectOffset;
+		if (x * x + y * y + w * w + h * h < 0.01) this.#isSettled = true;
 	}
 
-	#snapTo(rect: DOMRect) {
+	#snapTo(rect: DOMRect, borderRadius?: number[]) {
 		setRect(this.#rect.current, rect);
-
-		if (this.matchBorderRadius) {
-			this.#borderRadius.current = [...this.#borderRadius.target];
-		}
+		if (borderRadius) this.#borderRadius.current = [...borderRadius];
 	}
 
 	#render() {
@@ -254,15 +245,13 @@ export class SpavIndicator {
 		this.#scale.current = lerp(this.#scale.current, this.#scale.target, progress);
 
 		if (this.#target && this.#isIntersecting) {
-			const style = getComputedStyle(this.#target);
 			const rect = this.#target.getBoundingClientRect();
+			const borderRadius = this.matchBorderRadius
+				? this.#getBorderRadius(this.#target, rect)
+				: undefined;
 
-			if (this.matchBorderRadius) {
-				this.#borderRadius.target = this.#getBorderRadius(this.#target, style, rect);
-			}
-
-			if (!this.#isSettled) this.#moveTo(rect, progress);
-			if (this.#isSettled) this.#snapTo(rect);
+			if (!this.#isSettled) this.#moveTo(rect, borderRadius, progress);
+			if (this.#isSettled) this.#snapTo(rect, borderRadius);
 		}
 
 		this.#render();
@@ -275,9 +264,7 @@ export class SpavIndicator {
 			return;
 		}
 
-		if (this.autoRaf) {
-			this.#rafId = requestAnimationFrame(this.raf);
-		}
+		if (this.autoRaf) this.#rafId = requestAnimationFrame(this.raf);
 	};
 
 	destroy() {
