@@ -1,8 +1,8 @@
 import { lerp, setRect, setStyle, isFocusableElement } from './utils';
-import type { FocusableElement, SpavCursorOptions } from './types';
+import type { FocusableElement, SpavIndicatorOptions } from './types';
 
-export class SpavCursor {
-	#cursor: HTMLElement;
+export class SpavIndicator {
+	#indicator: HTMLElement;
 	#target: FocusableElement | undefined;
 
 	#rect: { current: DOMRect; last?: DOMRect };
@@ -28,12 +28,12 @@ export class SpavCursor {
 		padding = 0,
 		matchBorderRadius = true,
 		autoRaf = true
-	}: SpavCursorOptions = {}) {
-		this.#cursor = document.createElement('div');
-		this.#cursor.dataset.spavCursor = '';
-		this.#cursor.ariaHidden = 'true';
+	}: SpavIndicatorOptions = {}) {
+		this.#indicator = document.createElement('div');
+		this.#indicator.dataset.spavIndicator = '';
+		this.#indicator.ariaHidden = 'true';
 
-		setStyle(this.#cursor, {
+		setStyle(this.#indicator, {
 			position: 'fixed',
 			top: '0',
 			left: '0',
@@ -58,7 +58,7 @@ export class SpavCursor {
 		this.matchBorderRadius = matchBorderRadius;
 		this.autoRaf = autoRaf;
 
-		document.body.append(this.#cursor);
+		document.body.append(this.#indicator);
 
 		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
@@ -215,7 +215,7 @@ export class SpavCursor {
 		const p = this.padding;
 		const [tlh, tlv, trh, trv, brh, brv, blh, blv] = this.#borderRadius.current;
 
-		setStyle(this.#cursor, {
+		setStyle(this.#indicator, {
 			width: `${this.#rect.current.width + p * 2}px`,
 			height: `${this.#rect.current.height + p * 2}px`,
 			translate: `${this.#rect.current.x - p}px ${this.#rect.current.y - p}px`,
@@ -258,7 +258,7 @@ export class SpavCursor {
 		this.#render();
 
 		if ((!this.#target || !this.#isIntersecting) && this.#scale.current < 0.01) {
-			setStyle(this.#cursor, { scale: '0' });
+			setStyle(this.#indicator, { scale: '0' });
 			this.#scale.current = 0;
 			this.#rafId = undefined;
 			this.#lastTime = undefined;
@@ -277,7 +277,7 @@ export class SpavCursor {
 		}
 
 		this.#observer.disconnect();
-		this.#cursor.remove();
+		this.#indicator.remove();
 
 		window.removeEventListener('focusin', this.#onFocusIn);
 		window.removeEventListener('focusout', this.#onFocusOut);

@@ -68,9 +68,9 @@ export interface SpavFocusEvent {
 
 export type SpavFocusCallback = (event: SpavFocusEvent) => void;
 
-export interface SpavCursorOptions {
+export interface SpavIndicatorOptions {
 	/**
-	 * Determines how quickly the cursor animates between targets.
+	 * Determines how quickly the indicator animates between targets.
 	 * Accepts a value in the range `0` (slowest) to `1` (instant).
 	 *
 	 * @default 0.25
@@ -78,14 +78,14 @@ export interface SpavCursorOptions {
 	speed?: number;
 
 	/**
-	 * The amount of padding added around the cursor in pixels.
+	 * The amount of padding added around the indicator in pixels.
 	 *
 	 * @default 0
 	 */
 	padding?: number;
 
 	/**
-	 * Whether the cursor matches the border radius of its target.
+	 * Whether the indicator matches the border radius of its target.
 	 *
 	 * @default true
 	 */
@@ -99,21 +99,21 @@ export interface SpavCursorOptions {
 	autoRaf?: boolean;
 }
 
-export interface SpavCursorApi extends Required<SpavCursorOptions> {
+export interface SpavIndicatorApi extends Required<SpavIndicatorOptions> {
 	/**
-	 * Advances the cursor by one frame. Must be called every frame when `autoRaf` is disabled.
+	 * Advances the indicator by one frame. Must be called every frame when `autoRaf` is disabled.
 	 */
 	readonly raf: FrameRequestCallback;
 }
 
 export interface SpavOptions {
 	/**
-	 * Configures the visual cursor that tracks the focused element.
+	 * Configures the visual indicator that tracks the focused element.
 	 * Accepts `true` to enable defaults, `false` to disable, or an options object to customize.
 	 *
 	 * @default true
 	 */
-	cursor?: boolean | SpavCursorOptions;
+	indicator?: boolean | SpavIndicatorOptions;
 
 	/**
 	 * Whether to blur the active element upon pressing the Escape key.

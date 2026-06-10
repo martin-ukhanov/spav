@@ -1,4 +1,4 @@
-import { SpavCursor } from './cursor';
+import { SpavIndicator } from './indicator';
 
 import {
 	getExplicitTabIndex,
@@ -23,8 +23,8 @@ import type {
 	SpavScrollIntoViewCallback,
 	SpavFocusCallback,
 	SpavFocusEvent,
-	SpavCursorOptions,
-	SpavCursorApi,
+	SpavIndicatorOptions,
+	SpavIndicatorApi,
 	SpavOptions
 } from './types';
 
@@ -34,31 +34,31 @@ export class Spav {
 	#origin?: Origin;
 	#activeScrollContainer?: Element;
 
-	#cursor?: SpavCursor;
-	#cursorApi?: SpavCursorApi;
+	#indicator?: SpavIndicator;
+	#indicatorApi?: SpavIndicatorApi;
 
 	blurOnEscape: boolean;
 	scroll: boolean | SpavScrollOptions | SpavScrollCallback;
 	scrollIntoView: boolean | SpavScrollIntoViewOptions | SpavScrollIntoViewCallback;
 	onFocus?: SpavFocusCallback;
 
-	get cursor(): SpavCursorApi | undefined {
-		return this.#cursorApi;
+	get indicator(): SpavIndicatorApi | undefined {
+		return this.#indicatorApi;
 	}
 
-	set cursor(value: boolean | SpavCursorOptions) {
-		this.#cursor?.destroy();
+	set indicator(value: boolean | SpavIndicatorOptions) {
+		this.#indicator?.destroy();
 
 		if (!value) {
-			this.#cursor = undefined;
-			this.#cursorApi = undefined;
+			this.#indicator = undefined;
+			this.#indicatorApi = undefined;
 			return;
 		}
 
-		const cursor = new SpavCursor(value === true ? undefined : value);
-		this.#cursor = cursor;
+		const indicator = new SpavIndicator(value === true ? undefined : value);
+		this.#indicator = indicator;
 
-		const CURSOR_API_WRITABLE: Record<keyof SpavCursorApi, boolean> = {
+		const INDICATOR_API_WRITABLE: Record<keyof SpavIndicatorApi, boolean> = {
 			speed: true,
 			padding: true,
 			matchBorderRadius: true,
@@ -66,21 +66,21 @@ export class Spav {
 			raf: false
 		};
 
-		const cursorApi = {} as SpavCursorApi;
+		const indicatorApi = {} as SpavIndicatorApi;
 
-		for (const key of Object.keys(CURSOR_API_WRITABLE) as (keyof SpavCursorApi)[]) {
-			Object.defineProperty(cursorApi, key, {
+		for (const key of Object.keys(INDICATOR_API_WRITABLE) as (keyof SpavIndicatorApi)[]) {
+			Object.defineProperty(indicatorApi, key, {
 				enumerable: true,
-				get: () => cursor[key],
-				set: CURSOR_API_WRITABLE[key] ? (value) => Reflect.set(cursor, key, value) : undefined
+				get: () => indicator[key],
+				set: INDICATOR_API_WRITABLE[key] ? (value) => Reflect.set(indicator, key, value) : undefined
 			});
 		}
 
-		this.#cursorApi = cursorApi;
+		this.#indicatorApi = indicatorApi;
 	}
 
 	constructor({
-		cursor = true,
+		indicator = true,
 		blurOnEscape = true,
 		scroll = true,
 		scrollIntoView = true,
@@ -89,7 +89,7 @@ export class Spav {
 		this.#scrollContainers = new Map();
 		this.#rects = new Map();
 
-		this.cursor = cursor;
+		this.indicator = indicator;
 		this.blurOnEscape = blurOnEscape;
 		this.scroll = scroll;
 		this.scrollIntoView = scrollIntoView;
@@ -758,9 +758,9 @@ export class Spav {
 		this.#origin = undefined;
 		this.#activeScrollContainer = undefined;
 
-		this.#cursor?.destroy();
-		this.#cursor = undefined;
-		this.#cursorApi = undefined;
+		this.#indicator?.destroy();
+		this.#indicator = undefined;
+		this.#indicatorApi = undefined;
 
 		window.removeEventListener('keydown', this.#onKeyDown);
 		window.removeEventListener('focusout', this.#onFocusOut);

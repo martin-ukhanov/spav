@@ -10,6 +10,6 @@ export type {
 	SpavScrollIntoViewCallback,
 	SpavFocusEvent,
 	SpavFocusCallback,
-	SpavCursorOptions,
+	SpavIndicatorOptions,
 	SpavOptions
 } from './types';

@@ -19,7 +19,7 @@ for (let i = 1; i <= 12; i++) {
 }
 
 const spav = new Spav({
-	cursor: { autoRaf: false, matchBorderRadius: true },
+	indicator: { autoRaf: false, matchBorderRadius: true },
 	scroll: { behavior: 'smooth' },
 	scrollIntoView: { behavior: 'smooth', block: 'nearest', inline: 'nearest' },
 	onFocus: ({ target, direction }) => {
@@ -28,7 +28,7 @@ const spav = new Spav({
 });
 
 const raf: FrameRequestCallback = (time) => {
-	spav.cursor?.raf(time);
+	spav.indicator?.raf(time);
 	requestAnimationFrame(raf);
 };
 
