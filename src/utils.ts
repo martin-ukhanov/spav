@@ -82,16 +82,14 @@ export function canScroll(element: Element, direction: SpavDirection) {
 	const EPSILON = 1;
 	const { scrollLeft, scrollTop, clientWidth, clientHeight, scrollWidth, scrollHeight } = element;
 
-	switch (direction) {
-		case 'left':
-			return scrollLeft > EPSILON;
-		case 'right':
-			return scrollLeft + clientWidth < scrollWidth - EPSILON;
-		case 'up':
-			return scrollTop > EPSILON;
-		case 'down':
-			return scrollTop + clientHeight < scrollHeight - EPSILON;
-	}
+	if (direction === 'up') return scrollTop > EPSILON;
+	else if (direction === 'down') return scrollTop + clientHeight < scrollHeight - EPSILON;
+
+	const maxScrollLeft = scrollWidth - clientWidth;
+	const isRtl = maxScrollLeft > EPSILON && getComputedStyle(element).direction === 'rtl';
+
+	if (direction === 'left') return scrollLeft > (isRtl ? -maxScrollLeft : 0) + EPSILON;
+	else if (direction === 'right') return scrollLeft < (isRtl ? 0 : maxScrollLeft) - EPSILON;
 }
 
 /**
