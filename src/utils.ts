@@ -117,29 +117,38 @@ export function isFocusableElement(element: Element): element is FocusableElemen
  * @returns `true` if navigation should proceed, `false` otherwise.
  */
 export function isCaretAtEdge(element: Element, direction: SpavDirection) {
-	if (
-		(!(element instanceof HTMLTextAreaElement) &&
-			!(
-				element instanceof HTMLInputElement &&
-				['text', 'search', 'url', 'tel', 'password', 'email'].includes(element.type)
-			)) ||
-		element.readOnly ||
-		element.disabled
-	) {
-		return true;
-	}
-
 	const atStart = direction === 'left' || direction === 'up';
 
-	let selectionStart: number | null;
-	let selectionEnd: number | null;
+	if (element instanceof HTMLElement && element.isContentEditable) {
+		const selection = window.getSelection();
+		if (!selection || selection.rangeCount === 0) return true;
+		if (!selection.isCollapsed) return false;
 
-	try {
-		selectionStart = element.selectionStart;
-		selectionEnd = element.selectionEnd;
-	} catch {
+		const range = selection.getRangeAt(0);
+		if (!element.contains(range.commonAncestorContainer)) return true;
+
+		const probe = range.cloneRange();
+		probe.selectNodeContents(element);
+
+		if (atStart) {
+			probe.setEnd(range.startContainer, range.startOffset);
+		} else {
+			probe.setStart(range.endContainer, range.endOffset);
+		}
+
+		return probe.toString().trim().length === 0;
+	}
+
+	const isTextArea = element instanceof HTMLTextAreaElement;
+	const isTextInput =
+		element instanceof HTMLInputElement &&
+		['text', 'search', 'url', 'tel', 'password'].includes(element.type);
+
+	if ((!isTextArea && !isTextInput) || element.readOnly || element.disabled) {
 		return true;
 	}
+
+	const { selectionStart, selectionEnd } = element;
 
 	if (selectionStart === null || selectionEnd === null) return true;
 	if (selectionStart !== selectionEnd) return false;
