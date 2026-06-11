@@ -17,11 +17,16 @@ export class SpavIndicator {
 
 	#rafId: number | undefined;
 	#lastTime: number | undefined;
+	#lastStyle: string | undefined;
 
 	speed: number;
 	padding: number;
 	matchBorderRadius: boolean;
 	autoRaf: boolean;
+
+	get #isDormant() {
+		return (!this.#target || !this.#isIntersecting) && !this.#scale.current;
+	}
 
 	constructor({
 		speed = 0.25,
@@ -214,17 +219,24 @@ export class SpavIndicator {
 
 	#render() {
 		const p = this.padding;
+		const { x, y, width, height } = this.#rect.current;
 		const [tlh, tlv, trh, trv, brh, brv, blh, blv] = this.#borderRadius.current;
 
-		setStyle(this.#indicator, {
-			width: `${this.#rect.current.width + p * 2}px`,
-			height: `${this.#rect.current.height + p * 2}px`,
-			translate: `${this.#rect.current.x - p}px ${this.#rect.current.y - p}px`,
+		const style = {
+			width: `${width + p * 2}px`,
+			height: `${height + p * 2}px`,
+			translate: `${x - p}px ${y - p}px`,
 			borderRadius: this.matchBorderRadius
 				? `${tlh}px ${trh}px ${brh}px ${blh}px / ${tlv}px ${trv}px ${brv}px ${blv}px`
 				: '',
 			scale: `${this.#scale.current}`
-		});
+		};
+
+		const signature = `${style.width} ${style.height} ${style.translate} ${style.borderRadius} ${style.scale}`;
+		if (signature === this.#lastStyle) return;
+
+		this.#lastStyle = signature;
+		setStyle(this.#indicator, style);
 	}
 
 	#hide() {
@@ -236,7 +248,7 @@ export class SpavIndicator {
 
 	raf: FrameRequestCallback = (time) => {
 		this.#rafId = undefined;
-		if ((!this.#target || !this.#isIntersecting) && !this.#scale.current) return;
+		if (this.#isDormant) return;
 
 		const deltaTime = time - (this.#lastTime ?? time);
 		const speed = Math.min(Math.max(this.speed, 0.01), 1);
@@ -244,6 +256,10 @@ export class SpavIndicator {
 
 		this.#lastTime = time;
 		this.#scale.current = lerp(this.#scale.current, this.#scale.target, progress);
+
+		if (Math.abs(this.#scale.target - this.#scale.current) < 0.01) {
+			this.#scale.current = this.#scale.target;
+		}
 
 		if (this.#target && this.#isIntersecting) {
 			const rect = this.#target.getBoundingClientRect();
@@ -257,9 +273,7 @@ export class SpavIndicator {
 
 		this.#render();
 
-		if ((!this.#target || !this.#isIntersecting) && this.#scale.current < 0.01) {
-			setStyle(this.#indicator, { scale: '0' });
-			this.#scale.current = 0;
+		if (this.#isDormant) {
 			this.#lastTime = undefined;
 			return;
 		}
