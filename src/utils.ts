@@ -121,6 +121,7 @@ export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 
 	if (element instanceof HTMLElement && element.isContentEditable) {
 		const selection = window.getSelection();
+
 		if (!selection || selection.rangeCount === 0) return true;
 		if (!selection.isCollapsed) return false;
 
