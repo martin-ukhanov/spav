@@ -739,23 +739,21 @@ export class Spav {
 
 		const viewport = this.#getRect(document.documentElement);
 
-		while (container) {
-			const candidates = this.#getCandidates(container);
-			const visibleCandidates = candidates.filter(
+		const filterVisible = (candidates: Element[]) =>
+			candidates.filter(
 				(candidate) =>
 					candidate !== origin.element && intersects(this.#getRect(candidate), viewport)
 			);
+
+		while (container) {
+			const candidates = this.#getCandidates(container);
+			const visibleCandidates = filterVisible(candidates);
 
 			if (visibleCandidates.length) {
 				let best = this.#selectBestVisible(origin, visibleCandidates, direction, viewport);
 
 				while (best && !this.#isFocusable(best) && this.#isContainer(best)) {
-					const innerCandidates = this.#getCandidates(best);
-					const visibleInner = innerCandidates.filter(
-						(candidate) =>
-							candidate !== origin.element && intersects(this.#getRect(candidate), viewport)
-					);
-
+					const visibleInner = filterVisible(this.#getCandidates(best));
 					const next = this.#selectBestVisible(origin, visibleInner, direction, viewport);
 
 					// Scroll container entered with no visible targets inside
