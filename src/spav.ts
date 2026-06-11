@@ -441,22 +441,21 @@ export class Spav {
 	 * Recursively retrieves all potential focus candidates within a container.
 	 *
 	 * @param container - The root container element to search within.
+	 * @param candidates - The array that accumulates results across recursive calls.
 	 * @returns An array of candidate elements that are either focusable targets or nested containers.
 	 */
-	#getCandidates = (container: Element) => {
-		const candidates: Element[] = [];
-
+	#getCandidates(container: Element, candidates: Element[] = []) {
 		for (const child of container.children) {
 			if (this.#isContainer(child)) {
 				candidates.push(child);
 			} else {
 				if (this.#isFocusable(child)) candidates.push(child);
-				candidates.push(...this.#getCandidates(child));
+				this.#getCandidates(child, candidates);
 			}
 		}
 
 		return candidates;
-	};
+	}
 
 	/**
 	 * Evaluates a list of candidate elements and selects the most optimal target for spatial navigation.
