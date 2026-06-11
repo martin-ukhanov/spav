@@ -35,6 +35,7 @@ export class Spav {
 
 	#origin?: Origin;
 	#activeScrollContainer?: Element;
+	#scrollCheckId?: number;
 
 	#indicator?: SpavIndicator;
 	#indicatorApi?: SpavIndicatorApi;
@@ -584,6 +585,70 @@ export class Spav {
 	}
 
 	/**
+	 * Blurs an element that a scroll has carried out of the viewport,
+	 * handing subsequent navigation over to the scrolled container.
+	 *
+	 * @param focused - The element that was focused when the scroll started.
+	 * @param container - The scrolled container.
+	 */
+	#blurIfHidden(focused: Element, container: Element) {
+		this.#rects.clear(); // Cached rects may be stale due to scroll
+
+		if (
+			focused === this.#getFocused() &&
+			isFocusableElement(focused) &&
+			!this.#isVisible(focused, this.#getRect(document.documentElement))
+		) {
+			focused.blur();
+			this.#origin = undefined;
+			this.#activeScrollContainer = container;
+		}
+	}
+
+	/**
+	 * Runs an out-of-view check on the specified element every frame until
+	 * it is blurred or the specified scrolled container comes to rest.
+	 *
+	 * @param focused - The element that was focused when the scroll started.
+	 * @param container - The scrolled container.
+	 */
+	#scheduleScrollCheck(focused: Element, container: Element) {
+		let { scrollLeft, scrollTop } = container;
+		let stable = 0;
+
+		const poll = () => {
+			this.#scrollCheckId = undefined;
+			this.#blurIfHidden(focused, container);
+
+			// Stop if the element is no longer focused
+			if (document.activeElement !== focused) return;
+
+			if (container.scrollLeft === scrollLeft && container.scrollTop === scrollTop) {
+				stable++;
+			} else {
+				scrollLeft = container.scrollLeft;
+				scrollTop = container.scrollTop;
+				stable = 0;
+			}
+
+			// Stop after two unchanged frames
+			if (stable < 2) this.#scrollCheckId = requestAnimationFrame(poll);
+		};
+
+		this.#scrollCheckId = requestAnimationFrame(poll);
+	}
+
+	/**
+	 * Cancels any pending scroll check.
+	 */
+	#cancelScrollCheck() {
+		if (this.#scrollCheckId !== undefined) {
+			cancelAnimationFrame(this.#scrollCheckId);
+			this.#scrollCheckId = undefined;
+		}
+	}
+
+	/**
 	 * Scrolls a target element into view based on the current configuration.
 	 * Supports disabling the action, applying specific scroll options, or executing a custom scroll function.
 	 *
@@ -647,6 +712,7 @@ export class Spav {
 	 * @param direction - The direction to navigate.
 	 */
 	navigate(direction: SpavDirection) {
+		this.#cancelScrollCheck();
 		this.#rects.clear();
 		this.#focusables.clear();
 		this.#scrollContainers.clear();
@@ -694,11 +760,11 @@ export class Spav {
 
 					// Scroll container entered with no visible targets inside
 					if (!next && this.#isScrollContainer(best)) {
-						const active = document.activeElement;
+						const focused = this.#getFocused();
 
-						// Blur active element if outside scroll container
-						if (active && active !== document.body && !best.contains(active)) {
-							if (isFocusableElement(active)) active.blur();
+						// Blur focused element if outside scroll container
+						if (focused && !best.contains(focused)) {
+							if (isFocusableElement(focused)) focused.blur();
 							this.#origin = undefined;
 						}
 
@@ -750,21 +816,17 @@ export class Spav {
 					(hasUnreachedCandidates || isContainerScroll) &&
 					canScroll(scrollContainer, direction)
 				) {
+					const focused = this.#getFocused();
 					this.#scroll(scrollContainer, direction);
-					this.#rects.clear();
 
-					const active = document.activeElement;
+					if (focused) {
+						// Instant scroll
+						this.#blurIfHidden(focused, scrollContainer);
 
-					// Blur active element if scrolled out of view
-					if (
-						active &&
-						active !== document.body &&
-						isFocusableElement(active) &&
-						!this.#isVisible(active, viewport)
-					) {
-						active.blur();
-						this.#origin = undefined;
-						this.#activeScrollContainer = scrollContainer;
+						// Smooth scroll
+						if (document.activeElement === focused) {
+							this.#scheduleScrollCheck(focused, scrollContainer);
+						}
 					}
 
 					return;
@@ -780,6 +842,7 @@ export class Spav {
 	 * Cleans up the instance and removes all event listeners.
 	 */
 	destroy() {
+		this.#cancelScrollCheck();
 		this.#rects.clear();
 		this.#focusables.clear();
 		this.#scrollContainers.clear();
