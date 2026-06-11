@@ -62,7 +62,7 @@ export function isScrollContainer(element: Element) {
 	if (element === document.documentElement) return isOverflowX || isOverflowY;
 	if (!isOverflowX && !isOverflowY) return false;
 
-	const SCROLL_VALUES = ['auto', 'scroll', 'hidden'];
+	const SCROLL_VALUES = ['auto', 'scroll'];
 	const style = getComputedStyle(element);
 
 	const canScrollX = SCROLL_VALUES.includes(style.overflowX) && isOverflowX;
