@@ -101,7 +101,7 @@ export class Spav {
 	}
 
 	#onKeyDown = (event: KeyboardEvent) => {
-		if (event.defaultPrevented) return;
+		if (event.defaultPrevented || event.isComposing) return;
 
 		if (event.key === 'Escape') {
 			if (this.blurOnEscape) {
