@@ -130,11 +130,8 @@ export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 		const probe = range.cloneRange();
 		probe.selectNodeContents(element);
 
-		if (atStart) {
-			probe.setEnd(range.startContainer, range.startOffset);
-		} else {
-			probe.setStart(range.endContainer, range.endOffset);
-		}
+		if (atStart) probe.setEnd(range.startContainer, range.startOffset);
+		else probe.setStart(range.endContainer, range.endOffset);
 
 		return probe.toString().trim().length === 0;
 	}
