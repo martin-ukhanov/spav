@@ -598,6 +598,8 @@ export class Spav {
 		if (!this.#isFocusable(target)) return false;
 
 		target.focus({ focusVisible: true, preventScroll: true });
+		if (!target.contains(document.activeElement)) return false;
+
 		this.#scrollIntoView(target);
 		this.#origin = undefined;
 		this.#activeScrollContainer = undefined;
