@@ -751,9 +751,9 @@ export class Spav {
 					canScroll(scrollContainer, direction)
 				) {
 					this.#scroll(scrollContainer, direction);
+					this.#rects.clear();
 
 					const active = document.activeElement;
-					if (active) this.#rects.delete(active); // Active element rect stale after scroll
 
 					// Blur active element if scrolled out of view
 					if (
