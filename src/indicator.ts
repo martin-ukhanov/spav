@@ -235,7 +235,8 @@ export class SpavIndicator {
 	}
 
 	raf: FrameRequestCallback = (time) => {
-		if ((!this.#target || !this.#isIntersecting) && this.#scale.current === 0) return;
+		this.#rafId = undefined;
+		if ((!this.#target || !this.#isIntersecting) && !this.#scale.current) return;
 
 		const deltaTime = time - (this.#lastTime ?? time);
 		const speed = Math.min(Math.max(this.speed, 0.01), 1);
@@ -259,7 +260,6 @@ export class SpavIndicator {
 		if ((!this.#target || !this.#isIntersecting) && this.#scale.current < 0.01) {
 			setStyle(this.#indicator, { scale: '0' });
 			this.#scale.current = 0;
-			this.#rafId = undefined;
 			this.#lastTime = undefined;
 			return;
 		}
