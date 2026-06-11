@@ -138,8 +138,22 @@ export class SpavIndicator {
 	};
 
 	#getBorderRadius(element: FocusableElement, rect?: DOMRect) {
-		const resolve = (value: string, axis: number, scale: number) =>
-			value.endsWith('%') ? (parseFloat(value) / 100) * axis : parseFloat(value) * scale;
+		const resolve = (value: string, axis: number, scale: number) => {
+			if (value.startsWith('calc(')) {
+				let total = 0;
+
+				for (const term of value.slice(5, -1).replaceAll(' - ', ' + -').split(' + ')) {
+					total += resolve(term, axis, scale);
+				}
+
+				return Math.max(0, total);
+			}
+
+			const number = parseFloat(value);
+			if (Number.isNaN(number)) return 0; // Unsupported, e.g. min(), max(), clamp()
+
+			return value.endsWith('%') ? (number / 100) * axis : number * scale;
+		};
 
 		const style = getComputedStyle(element);
 		if (!rect) rect = element.getBoundingClientRect();
@@ -159,7 +173,7 @@ export class SpavIndicator {
 			style.borderBottomRightRadius,
 			style.borderBottomLeftRadius
 		].flatMap((value) => {
-			const [h, v = h] = value.split(' ');
+			const [h, v = h] = value.split(/\s+(?![^()]*\))/); // Skip spaces inside calc()
 			return [resolve(h, rect.width, scaleX), resolve(v, rect.height, scaleY)];
 		});
 
