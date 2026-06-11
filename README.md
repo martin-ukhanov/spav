@@ -121,7 +121,7 @@ requestAnimationFrame(raf);
 | Attribute             | Effect                                                                                                                                                                                                                                                          |
 | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `data-spav-contain`   | Marks an element as a spatial navigation container. Candidates are searched container by container, so this scopes navigation to the group first before escaping to the rest of the page. Scroll containers and the document root are containers automatically. |
-| `data-spav-ignore`    | Excludes the element and all of its descendants from spatial navigation.                                                                                                                                                                                        |
+| `data-spav-ignore`    | Prevents the element and all of its descendants from receiving focus via spatial navigation. Scroll containers within are still entered and scrolled.                                                                                                           |
 | `data-spav-indicator` | Set by Spav on the indicator element. Use the `[data-spav-indicator]` selector as your styling hook.                                                                                                                                                            |
 
 ## License
