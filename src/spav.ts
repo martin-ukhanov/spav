@@ -29,8 +29,10 @@ import type {
 } from './types';
 
 export class Spav {
-	#scrollContainers: Map<Element, boolean>;
 	#rects: Map<Element, DOMRect>;
+	#focusables: Map<Element, boolean>;
+	#scrollContainers: Map<Element, boolean>;
+
 	#origin?: Origin;
 	#activeScrollContainer?: Element;
 
@@ -86,8 +88,9 @@ export class Spav {
 		scrollIntoView = true,
 		onFocus
 	}: SpavOptions = {}) {
-		this.#scrollContainers = new Map();
 		this.#rects = new Map();
+		this.#focusables = new Map();
+		this.#scrollContainers = new Map();
 
 		this.indicator = indicator;
 		this.blurOnEscape = blurOnEscape;
@@ -262,7 +265,7 @@ export class Spav {
 	 * @param element - The element to check.
 	 * @returns `true` if the element is focusable, `false` otherwise.
 	 */
-	#isFocusable(element: Element): element is FocusableElement {
+	#checkFocusable(element: Element) {
 		if (
 			!element.isConnected ||
 			element === document.documentElement ||
@@ -317,6 +320,23 @@ export class Spav {
 		if (width <= 0 || height <= 0) return false;
 
 		return true;
+	}
+
+	/**
+	 * Determines if an element can currently receive focus and caches the result.
+	 *
+	 * @param element - The element to check.
+	 * @returns `true` if the element is focusable, `false` otherwise.
+	 */
+	#isFocusable(element: Element): element is FocusableElement {
+		let value = this.#focusables.get(element);
+
+		if (value === undefined) {
+			value = this.#checkFocusable(element);
+			this.#focusables.set(element, value);
+		}
+
+		return value;
 	}
 
 	/**
@@ -615,6 +635,9 @@ export class Spav {
 	 * @returns `true` if the target element was successfully focused, `false` otherwise.
 	 */
 	focus(target: Element) {
+		this.#rects.clear();
+		this.#focusables.clear();
+		this.#scrollContainers.clear();
 		return this.#focus({ target });
 	}
 
@@ -626,6 +649,7 @@ export class Spav {
 	 */
 	navigate(direction: SpavDirection) {
 		this.#rects.clear();
+		this.#focusables.clear();
 		this.#scrollContainers.clear();
 
 		if (this.#activeScrollContainer && !this.#activeScrollContainer.isConnected) {
@@ -758,7 +782,9 @@ export class Spav {
 	 */
 	destroy() {
 		this.#rects.clear();
+		this.#focusables.clear();
 		this.#scrollContainers.clear();
+
 		this.#origin = undefined;
 		this.#activeScrollContainer = undefined;
 
