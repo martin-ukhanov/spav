@@ -290,7 +290,6 @@ export class Spav {
 		switch (element.tagName) {
 			case 'a':
 			case 'A':
-			case 'AREA':
 				if (!element.hasAttribute('href')) return false;
 				break;
 
