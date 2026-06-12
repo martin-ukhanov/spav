@@ -18,13 +18,13 @@ export function lerp(a: number, b: number, t: number) {
  * @param rect - The rectangle to update.
  * @param value - The `x`, `y`, `width`, and `height` to copy onto the rectangle.
  */
-export function setRect(rect: DOMRect, value: DOMRectInit) {
+export function setRect(rect: DOMRect, value: Required<DOMRectInit>) {
 	Object.assign(rect, {
 		x: value.x,
 		y: value.y,
 		width: value.width,
 		height: value.height
-	} as DOMRectInit);
+	});
 }
 
 /**
