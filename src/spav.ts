@@ -296,9 +296,8 @@ export class Spav {
 
 			case 'AUDIO':
 			case 'VIDEO':
-				if (!element.hasAttribute('controls')) {
-					const tabIndex = getExplicitTabIndex(element);
-					if (tabIndex && tabIndex < 0) return false;
+				if (!element.hasAttribute('controls') && getExplicitTabIndex(element) === undefined) {
+					return false;
 				}
 				break;
 		}

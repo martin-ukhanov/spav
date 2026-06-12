@@ -28,14 +28,15 @@ export function setRect(rect: DOMRect, value: DOMRectInit) {
 }
 
 /**
- * Gets the `tabindex` value explicitly set on an element via its attribute,
+ * Gets the `tabindex` value explicitly set on an element via its attribute.
  *
  * @param element - The element to check.
- * @returns The parsed `tabindex` value, or `undefined` if the attribute is absent.
+ * @returns The parsed `tabindex` value, or `undefined` if the attribute is absent or invalid.
  */
 export function getExplicitTabIndex(element: Element) {
 	const tabIndex = element.getAttribute('tabindex');
-	return tabIndex ? parseInt(tabIndex) : undefined;
+	const value = tabIndex ? parseInt(tabIndex) : NaN;
+	return isNaN(value) ? undefined : value;
 }
 
 /**
