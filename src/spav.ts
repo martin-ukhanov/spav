@@ -28,6 +28,11 @@ import type {
 	SpavOptions
 } from './types';
 
+const DEFAULT_SCROLL_AMOUNT = 50;
+const DEFAULT_SCROLL_BEHAVIOR: ScrollBehavior = 'auto';
+const DEFAULT_SCROLL_INLINE: ScrollLogicalPosition = 'nearest';
+const DEFAULT_SCROLL_BLOCK: ScrollLogicalPosition = 'nearest';
+
 const INDICATOR_API_WRITABLE: Record<keyof SpavIndicatorApi, boolean> = {
 	speed: true,
 	padding: true,
@@ -564,8 +569,8 @@ export class Spav {
 			return;
 		}
 
-		let amount = 50;
-		let behavior: ScrollBehavior = 'auto';
+		let amount = DEFAULT_SCROLL_AMOUNT;
+		let behavior = DEFAULT_SCROLL_BEHAVIOR;
 
 		if (typeof this.scroll === 'object') {
 			if (this.scroll.amount !== undefined) amount = Math.abs(this.scroll.amount);
@@ -663,9 +668,9 @@ export class Spav {
 		const options = typeof this.scrollIntoView === 'object' ? this.scrollIntoView : {};
 
 		target.scrollIntoView({
-			inline: 'nearest',
-			block: 'nearest',
-			behavior: 'auto',
+			inline: DEFAULT_SCROLL_INLINE,
+			block: DEFAULT_SCROLL_BLOCK,
+			behavior: DEFAULT_SCROLL_BEHAVIOR,
 			...options
 		});
 	}

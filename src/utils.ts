@@ -264,6 +264,10 @@ export function getEdgeDistance(origin: DOMRect, target: DOMRect, direction: Spa
 	}
 }
 
+const HORIZONTAL_ORTHOGONAL_WEIGHT = 30;
+const VERTICAL_ORTHOGONAL_WEIGHT = 2;
+const ALIGN_WEIGHT = 5;
+
 /**
  * Calculates a weighted heuristic distance between two rectangles in a given direction.
  *
@@ -301,18 +305,16 @@ export function getWeightedDistance(origin: DOMRect, target: DOMRect, direction:
 	if (direction === 'left' || direction === 'right') {
 		orthogonalDistance = gapY;
 		orthogonalBias = fromHeight / 2;
-		orthogonalWeight = 30;
+		orthogonalWeight = HORIZONTAL_ORTHOGONAL_WEIGHT;
 		alignBias = overlapY / fromHeight;
 	} else {
 		orthogonalDistance = gapX;
 		orthogonalBias = fromWidth / 2;
-		orthogonalWeight = 2;
+		orthogonalWeight = VERTICAL_ORTHOGONAL_WEIGHT;
 		alignBias = overlapX / fromWidth;
 	}
 
 	const displacement = (orthogonalDistance + orthogonalBias) * orthogonalWeight;
-
-	const ALIGN_WEIGHT = 5;
 	const alignment = alignBias * ALIGN_WEIGHT;
 
 	return euclideanDistance + displacement - alignment - Math.sqrt(overlapArea);

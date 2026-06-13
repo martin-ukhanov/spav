@@ -1,6 +1,11 @@
 import { lerp, setRect, setStyle, isFocusableElement } from './utils';
 import type { FocusableElement, SpavIndicatorOptions } from './types';
 
+const MAX_Z_INDEX = 2147483647;
+const MIN_SPEED = 0.01;
+const MAX_SPEED = 1;
+const SETTLE_THRESHOLD = 0.01;
+
 export class SpavIndicator {
 	#indicator: HTMLElement;
 	#target: FocusableElement | undefined;
@@ -42,7 +47,7 @@ export class SpavIndicator {
 			position: 'fixed',
 			top: '0',
 			left: '0',
-			zIndex: '2147483647',
+			zIndex: `${MAX_Z_INDEX}`,
 			pointerEvents: 'none',
 			scale: '0',
 			willChange: 'translate, scale'
@@ -223,7 +228,7 @@ export class SpavIndicator {
 		}
 
 		const { x, y, width: w, height: h } = rectOffset;
-		if (x * x + y * y + w * w + h * h < 0.01) this.#isSettled = true;
+		if (x * x + y * y + w * w + h * h < SETTLE_THRESHOLD) this.#isSettled = true;
 	}
 
 	#snapTo(rect: DOMRect, borderRadius?: number[]) {
@@ -265,13 +270,13 @@ export class SpavIndicator {
 		if (this.#isDormant) return;
 
 		const deltaTime = time - (this.#lastTime ?? time);
-		const speed = Math.min(Math.max(this.speed, 0.01), 1);
+		const speed = Math.min(Math.max(this.speed, MIN_SPEED), MAX_SPEED);
 		const progress = 1 - Math.pow(1 - speed, deltaTime / (1000 / 60));
 
 		this.#lastTime = time;
 		this.#scale.current = lerp(this.#scale.current, this.#scale.target, progress);
 
-		if (Math.abs(this.#scale.target - this.#scale.current) < 0.01) {
+		if (Math.abs(this.#scale.target - this.#scale.current) < SETTLE_THRESHOLD) {
 			this.#scale.current = this.#scale.target;
 		}
 
