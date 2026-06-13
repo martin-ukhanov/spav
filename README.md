@@ -63,7 +63,7 @@ spav.indicator = { speed: 0.5 };
 
 | Option     | Type             | Default  | Description                                                       |
 | ---------- | ---------------- | -------- | ----------------------------------------------------------------- |
-| `amount`   | `number`         | `40`     | The pixel value to scroll by.                                     |
+| `amount`   | `number`         | `50`     | The pixel value to scroll by.                                     |
 | `behavior` | `ScrollBehavior` | `'auto'` | Determines whether the scrolling is instant or animates smoothly. |
 
 ### `SpavScrollIntoViewOptions`

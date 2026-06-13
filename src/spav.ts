@@ -564,7 +564,7 @@ export class Spav {
 			return;
 		}
 
-		let amount = 40;
+		let amount = 50;
 		let behavior: ScrollBehavior = 'auto';
 
 		if (typeof this.scroll === 'object') {

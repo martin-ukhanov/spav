@@ -11,7 +11,7 @@ export interface SpavScrollOptions {
 	/**
 	 * The pixel value to scroll by.
 	 *
-	 * @default 40
+	 * @default 50
 	 */
 	amount?: number;
 
