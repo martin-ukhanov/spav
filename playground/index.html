@@ -12,85 +12,23 @@
 			<aside class="sticky top-8 hidden h-fit w-56 shrink-0 lg:block">
 				<h1 class="mb-1 text-lg font-bold">Spav Playground</h1>
 				<p class="mb-4 text-xs text-slate-400">Use the arrow keys to navigate.</p>
-				<nav class="flex flex-col gap-1 text-sm" data-spav-ignore>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#types"
-					>
-						Focusable types
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#inputs"
-					>
-						Form controls
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#excluded"
-					>
-						Excluded elements
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#grid"
-					>
-						Grid heuristic
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#misaligned"
-					>
-						Misaligned
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#vscroll"
-					>
-						Vertical scroll
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#hscroll"
-					>
-						Horizontal scroll
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#nested"
-					>
-						Nested scroll
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#rtl"
-					>
-						RTL scroll
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#contain"
-					>
-						data-spav-contain
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#occlusion"
-					>
-						Occlusion
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#editable"
-					>
-						Contenteditable
-					</a>
-					<a
-						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
-						href="#offscreen"
-					>
-						Off-screen / clipped
-					</a>
+				<nav
+					class="flex flex-col gap-1 text-sm *:rounded *:px-2 *:py-1 *:text-slate-400 *:hover:bg-slate-800 *:hover:text-slate-100"
+					data-spav-ignore
+				>
+					<a href="#types">Focusable types</a>
+					<a href="#inputs">Form controls</a>
+					<a href="#excluded">Excluded elements</a>
+					<a href="#grid">Grid heuristic</a>
+					<a href="#misaligned">Misaligned</a>
+					<a href="#vscroll">Vertical scroll</a>
+					<a href="#hscroll">Horizontal scroll</a>
+					<a href="#nested">Nested scroll</a>
+					<a href="#rtl">RTL scroll</a>
+					<a href="#contain">data-spav-contain</a>
+					<a href="#occlusion">Occlusion</a>
+					<a href="#editable">Contenteditable</a>
+					<a href="#offscreen">Off-screen / clipped</a>
 				</nav>
 			</aside>
 
@@ -174,9 +112,6 @@
 							visibility:hidden
 						</button>
 						<button class="focusable not-focusable" style="opacity: 0">opacity:0</button>
-						<button class="focusable not-focusable" style="width: 0; height: 0; padding: 0">
-							zero-size
-						</button>
 						<button class="focusable">reachable</button>
 					</div>
 				</section>
@@ -307,12 +242,12 @@
 						<button class="focusable">covered</button>
 						<button class="focusable">visible right</button>
 						<div
-							class="pointer-events-none absolute inset-y-0 left-1/3 w-1/3 rounded-lg bg-slate-700/95"
+							class="absolute inset-y-0 left-1/3 w-1/3 rounded-lg bg-slate-700/90"
 							data-spav-ignore
 						>
-							<span class="flex h-full items-center justify-center text-xs text-slate-300"
-								>overlay</span
-							>
+							<span class="flex h-full items-center justify-center text-xs text-slate-300">
+								overlay
+							</span>
 						</div>
 					</div>
 				</section>
