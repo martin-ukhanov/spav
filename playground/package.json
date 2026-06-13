@@ -12,6 +12,8 @@
 		"vite": "^8.0.16"
 	},
 	"dependencies": {
-		"spav-js": "workspace:*"
+		"@tailwindcss/vite": "^4.3.0",
+		"spav-js": "workspace:*",
+		"tailwindcss": "^4.3.0"
 	}
 }

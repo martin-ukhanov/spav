@@ -5,9 +5,7 @@
 		"lib": ["ES2023", "DOM"],
 		"types": ["vite/client"],
 		"skipLibCheck": true,
-		"paths": {
-			"spav-js": ["../src/index.ts"]
-		},
+		"paths": { "spav-js": ["../src/index.ts"] },
 
 		/* Bundler mode */
 		"moduleResolution": "bundler",

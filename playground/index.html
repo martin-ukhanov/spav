@@ -3,334 +3,367 @@
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Spav | Core</title>
-		<style>
-			*:focus-visible {
-				outline: none !important;
-			}
-
-			[data-spav-indicator] {
-				border: 1px solid red;
-			}
-
-			:root {
-				--bg: #0e1116;
-				--panel: #161b22;
-				--panel-2: #1c2330;
-				--border: #2b3340;
-				--text: #c9d1d9;
-				--muted: #8b949e;
-				--accent: #58a6ff;
-				--accent-2: #3fb950;
-			}
-
-			* {
-				box-sizing: border-box;
-			}
-
-			body {
-				margin: 0;
-				padding: 24px;
-				font-family: system-ui, sans-serif;
-				background: var(--bg);
-				color: var(--text);
-				line-height: 1.5;
-			}
-
-			h1 {
-				margin: 0 0 4px;
-				font-size: 20px;
-			}
-
-			.hint {
-				margin: 0 0 24px;
-				color: var(--muted);
-				font-size: 14px;
-			}
-
-			.hint kbd {
-				background: var(--panel-2);
-				border: 1px solid var(--border);
-				border-radius: 4px;
-				padding: 1px 6px;
-				font-size: 12px;
-			}
-
-			section {
-				background: var(--panel);
-				border: 1px solid var(--border);
-				border-radius: 10px;
-				padding: 16px;
-				margin-bottom: 20px;
-			}
-
-			section > h2 {
-				margin: 0 0 12px;
-				font-size: 14px;
-				font-weight: 600;
-				color: var(--muted);
-				text-transform: uppercase;
-				letter-spacing: 0.5px;
-			}
-
-			.row {
-				display: flex;
-				flex-wrap: wrap;
-				gap: 10px;
-				align-items: center;
-			}
-
-			/* Focusable controls */
-			button,
-			a,
-			input,
-			select,
-			textarea,
-			.tile {
-				font: inherit;
-				color: var(--text);
-				background: var(--panel-2);
-				border: 1px solid var(--border);
-				border-radius: 10px;
-				padding: 8px 14px;
-				cursor: pointer;
-				text-decoration: none;
-
-				&:nth-child(3) {
-					animation: pulse 2s ease-in-out infinite alternate;
-					border-radius: 0 !important;
-				}
-			}
-
-			button:disabled {
-				opacity: 0.4;
-				cursor: not-allowed;
-			}
-
-			input,
-			select,
-			textarea {
-				cursor: text;
-			}
-
-			/* Strong, obvious focus ring driven by Spav (focusVisible) */
-			:focus-visible {
-				outline: 3px solid var(--accent);
-				outline-offset: 2px;
-				background: #1f6feb22;
-			}
-
-			/* Containers */
-			[data-spav-contain] {
-				border: 1px dashed var(--accent-2);
-				border-radius: 10px;
-				padding: 12px;
-			}
-
-			.contain-label {
-				font-size: 12px;
-				color: var(--accent-2);
-				margin-bottom: 10px;
-			}
-
-			.scroller-h {
-				position: relative;
-				display: flex;
-				gap: 10px;
-				overflow-x: auto;
-				padding: 8px;
-				border: 1px solid var(--border);
-				border-radius: 8px;
-			}
-
-			.scroller-v {
-				position: relative;
-				display: flex;
-				flex-direction: column;
-				gap: 10px;
-				overflow-y: auto;
-				max-height: 180px;
-				padding: 8px;
-				border: 1px solid var(--border);
-				border-radius: 8px;
-			}
-
-			.tile {
-				display: grid;
-				place-items: center;
-				min-width: 120px;
-				height: 70px;
-				flex: 0 0 auto;
-				text-align: center;
-			}
-
-			.cols {
-				display: grid;
-				grid-template-columns: 1fr 1fr;
-				gap: 20px;
-			}
-
-			/* Modal */
-			.modal-backdrop {
-				position: fixed;
-				inset: 0;
-				background: #000a;
-				display: none;
-				place-items: center;
-				z-index: 10;
-			}
-
-			.modal-backdrop[data-open] {
-				display: grid;
-			}
-
-			.modal {
-				position: relative;
-				width: min(420px, 90vw);
-				background: var(--panel);
-				border: 1px solid var(--border);
-				border-radius: 12px;
-				padding: 20px;
-			}
-
-			.modal h2 {
-				margin: 0 0 6px;
-				color: var(--text);
-				text-transform: none;
-				font-size: 18px;
-				letter-spacing: 0;
-			}
-
-			.modal p {
-				margin: 0 0 16px;
-				color: var(--muted);
-				font-size: 14px;
-			}
-
-			code {
-				background: var(--panel-2);
-				border: 1px solid var(--border);
-				border-radius: 4px;
-				padding: 1px 5px;
-				font-size: 12px;
-			}
-
-			@keyframes pulse {
-				from {
-					transform: scale(1) translateY(0px);
-				}
-
-				to {
-					transform: scale(2) translateY(0px);
-				}
-			}
-		</style>
+		<link href="/src/style.css" rel="stylesheet" />
+		<title>Spav Playground</title>
 	</head>
 	<body>
-		<h1>Spav playground</h1>
-		<p class="hint">
-			Navigate with <kbd>←</kbd> <kbd>↑</kbd> <kbd>→</kbd> <kbd>↓</kbd> · blur with <kbd>Esc</kbd> ·
-			click anywhere to set the origin.
-		</p>
+		<div class="mx-auto flex max-w-350 gap-8 px-6 py-8">
+			<!-- Sidebar nav -->
+			<aside class="sticky top-8 hidden h-fit w-56 shrink-0 lg:block">
+				<h1 class="mb-1 text-lg font-bold">Spav Playground</h1>
+				<p class="mb-4 text-xs text-slate-400">Use the arrow keys to navigate.</p>
+				<nav class="flex flex-col gap-1 text-sm" data-spav-ignore>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#types"
+					>
+						Focusable types
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#inputs"
+					>
+						Form controls
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#excluded"
+					>
+						Excluded elements
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#grid"
+					>
+						Grid heuristic
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#misaligned"
+					>
+						Misaligned
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#vscroll"
+					>
+						Vertical scroll
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#hscroll"
+					>
+						Horizontal scroll
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#nested"
+					>
+						Nested scroll
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#rtl"
+					>
+						RTL scroll
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#contain"
+					>
+						data-spav-contain
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#occlusion"
+					>
+						Occlusion
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#editable"
+					>
+						Contenteditable
+					</a>
+					<a
+						class="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+						href="#offscreen"
+					>
+						Off-screen / clipped
+					</a>
+				</nav>
+			</aside>
 
-		<!-- 1. Assorted focusable element types -->
-		<section>
-			<h2>Focusable elements</h2>
-			<div class="row">
-				<button>Button</button>
-				<a href="#">Anchor link</a>
-				<input type="text" placeholder="Text input" />
-				<input type="date" />
-				<input type="number" placeholder="Number" />
-				<select>
-					<option>Select</option>
-					<option>Option 2</option>
-				</select>
-				<label class="tile" style="min-width: auto; height: auto">
-					<input type="checkbox" style="width: auto" /> Checkbox
-				</label>
-				<button disabled>Disabled</button>
-				<button data-spav-ignore>Ignored (data-spav-ignore)</button>
-				<div tabindex="0" class="tile" style="min-width: auto; height: auto">tabindex div</div>
-			</div>
-		</section>
+			<!-- Main content -->
+			<main class="min-w-0 flex-1 space-y-12">
+				<header class="lg:hidden">
+					<h1 class="text-2xl font-bold">Spav Playground</h1>
+					<p class="text-sm text-slate-400">Use the arrow keys to navigate.</p>
+				</header>
 
-		<!-- 1b. Editable elements: caret moves until it hits an edge -->
-		<section>
-			<h2>Editable (arrow within text, navigate at the edge)</h2>
-			<div class="row" style="align-items: stretch">
-				<textarea
-					rows="4"
-					cols="28"
-					placeholder="Multi-line textarea&#10;Arrow to an edge to leave"
-				>
-Line one
-Line two
-Line three
-Line four</textarea
-				>
-				<div
-					contenteditable="true"
-					class="tile"
-					style="min-width: 220px; height: auto; text-align: left; align-content: center"
-				>
-					Editable div — arrow to the start or end to navigate out.
-					<div>Hello</div>
-				</div>
-			</div>
-		</section>
+				<!-- 1. Focusable element types -->
+				<section id="types">
+					<h2 class="mb-1 text-xl font-semibold">Focusable element types</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						Natively focusable elements. All of these should be reachable.
+					</p>
+					<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+						<button class="focusable">button</button>
+						<a class="focusable" href="#types">a[href]</a>
+						<details class="focusable block! p-0!">
+							<summary class="focusable">summary</summary>
+							<div class="p-3 text-sm text-slate-400">Details body</div>
+						</details>
+						<div class="focusable" tabindex="0">tabindex=0</div>
+						<div class="focusable" tabindex="3">tabindex=3</div>
+						<audio class="focusable w-full!" controls></audio>
+						<video class="focusable h-auto! w-full!" controls></video>
+						<svg class="focusable" tabindex="0" viewBox="0 0 24 24" width="48" height="48">
+							<circle cx="12" cy="12" r="10" fill="#5b8cff" />
+						</svg>
+						<label class="focusable"> checkbox <input type="checkbox" class="ml-2" /> </label>
+					</div>
+				</section>
 
-		<!-- 2. Scoped navigation container -->
-		<section>
-			<h2>Container (data-spav-contain)</h2>
-			<div data-spav-contain>
-				<div class="contain-label">Navigation is scoped inside this box</div>
-				<div class="row">
-					<button>Contained A</button>
-					<button>Contained B</button>
-					<button>Contained C</button>
-					<button>Contained D</button>
-				</div>
-			</div>
-		</section>
+				<!-- 2. Form controls -->
+				<section id="inputs">
+					<h2 class="mb-1 text-xl font-semibold">Form controls</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						Text inputs only escape when the caret sits at the matching edge — type into them and
+						notice arrow keys move the caret first.
+					</p>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3">
+						<input type="text" placeholder="text" />
+						<input type="search" placeholder="search" />
+						<input type="url" placeholder="url" />
+						<input type="email" placeholder="email" />
+						<input type="password" placeholder="password" />
+						<input type="number" placeholder="number" />
+						<input type="date" />
+						<input type="color" class="h-11" />
+						<input type="range" class="self-center" />
+						<input type="file" />
+						<select>
+							<option>Option one</option>
+							<option>Option two</option>
+						</select>
+						<textarea rows="2" placeholder="textarea — multiline caret escape"></textarea>
+					</div>
+				</section>
 
-		<!-- 3. Scrollers -->
-		<section>
-			<h2>Scrollers</h2>
+				<!-- 3. Excluded elements -->
+				<section id="excluded">
+					<h2 class="mb-1 text-xl font-semibold">Excluded elements</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						None of these should ever receive focus. The blue focusables around them are reachable;
+						navigation should skip straight past the orange ones.
+					</p>
+					<div class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+						<button class="focusable">reachable</button>
+						<button class="focusable not-focusable" disabled>disabled</button>
+						<input class="not-focusable" disabled value="disabled input" />
+						<a class="focusable not-focusable">a (no href)</a>
+						<div class="focusable not-focusable" tabindex="-1">tabindex=-1</div>
+						<audio class="not-focusable focusable">audio (no controls)</audio>
+						<div class="focusable not-focusable" data-spav-ignore>data-spav-ignore</div>
+						<div inert class="focusable not-focusable">
+							<button class="focusable not-focusable">inside [inert]</button>
+						</div>
+						<button class="focusable not-focusable" style="display: none">display:none</button>
+						<button class="focusable not-focusable" style="visibility: hidden">
+							visibility:hidden
+						</button>
+						<button class="focusable not-focusable" style="opacity: 0">opacity:0</button>
+						<button class="focusable not-focusable" style="width: 0; height: 0; padding: 0">
+							zero-size
+						</button>
+						<button class="focusable">reachable</button>
+					</div>
+				</section>
 
-			<div class="cols">
-				<div>
-					<div class="contain-label" style="color: var(--muted)">Horizontal</div>
-					<div class="scroller-h" id="scroller-h"></div>
-				</div>
-				<div>
-					<div class="contain-label" style="color: var(--muted)">Vertical</div>
-					<div class="scroller-v" id="scroller-v"></div>
-				</div>
-			</div>
-		</section>
+				<!-- 4. Grid heuristic -->
+				<section id="grid">
+					<h2 class="mb-1 text-xl font-semibold">Grid heuristic</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						A dense, evenly-aligned grid. Movement should land on the directly adjacent cell.
+						(Generated below.)
+					</p>
+					<div id="grid-target" class="grid grid-cols-6 gap-2"></div>
+				</section>
 
-		<!-- 4. Modal -->
-		<section>
-			<h2>Modal</h2>
-			<div class="row">
-				<button id="open-modal">Open modal</button>
-				<span class="hint" style="margin: 0">
-					Background goes <code>inert</code>; navigation is trapped inside.
-				</span>
-			</div>
-		</section>
+				<!-- 5. Misaligned candidates -->
+				<section id="misaligned">
+					<h2 class="mb-1 text-xl font-semibold">Misaligned candidates</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						Staggered elements of varying sizes — exercises the weighted-distance heuristic
+						(alignment overlap vs. raw distance).
+					</p>
+					<div class="relative h-72 rounded-xl border border-slate-700 bg-slate-900/40">
+						<button class="focusable absolute" style="left: 2%; top: 10%; width: 120px">A</button>
+						<button
+							class="focusable absolute"
+							style="left: 30%; top: 45%; width: 80px; height: 80px"
+						>
+							B (tall)
+						</button>
+						<button class="focusable absolute" style="left: 55%; top: 8%; width: 200px">
+							C (wide)
+						</button>
+						<button class="focusable absolute" style="left: 20%; top: 75%; width: 90px">D</button>
+						<button class="focusable absolute" style="left: 60%; top: 60%; width: 110px">E</button>
+						<button
+							class="focusable absolute"
+							style="left: 80%; top: 30%; width: 70px; height: 120px"
+						>
+							F (tall)
+						</button>
+						<button class="focusable absolute" style="left: 5%; top: 45%; width: 100px">G</button>
+					</div>
+				</section>
 
-		<div class="modal-backdrop" id="modal">
-			<div class="modal" data-spav-contain role="dialog" aria-modal="true">
-				<h2>Trapped modal</h2>
-				<p>Arrow keys stay inside. Press Esc or Close to dismiss.</p>
-				<div class="row">
-					<input type="text" placeholder="Focus me" />
-					<button>Confirm</button>
-					<button id="close-modal">Close</button>
-				</div>
-			</div>
+				<!-- 6. Vertical scroll container -->
+				<section id="vscroll">
+					<h2 class="mb-1 text-xl font-semibold">Vertical scroll container</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						An overflow-y container. Entering it should focus inner items; once the last visible
+						item is reached, the container scrolls before handing focus back to the page.
+					</p>
+					<div
+						id="vscroll-target"
+						class="h-64 space-y-2 overflow-y-auto rounded-xl border border-slate-700 bg-slate-900/40 p-3"
+					></div>
+				</section>
+
+				<!-- 7. Horizontal scroll container -->
+				<section id="hscroll">
+					<h2 class="mb-1 text-xl font-semibold">Horizontal scroll container</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						An overflow-x container. Left/right navigation should scroll it; up/down should escape
+						to the page.
+					</p>
+					<div
+						id="hscroll-target"
+						class="flex gap-3 overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/40 p-3"
+					></div>
+				</section>
+
+				<!-- 8. Nested scroll containers -->
+				<section id="nested">
+					<h2 class="mb-1 text-xl font-semibold">Nested scroll containers</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						A horizontal scroller whose items are themselves vertical scrollers. Tests nested
+						clipping and container traversal.
+					</p>
+					<div
+						class="flex gap-4 overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/40 p-4"
+					>
+						<div class="flex shrink-0 gap-4" id="nested-target"></div>
+					</div>
+				</section>
+
+				<!-- 9. RTL scroll -->
+				<section id="rtl">
+					<h2 class="mb-1 text-xl font-semibold">RTL horizontal scroll</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						Same as the horizontal scroller but with <code>dir="rtl"</code>, exercising the RTL
+						branch of scroll-edge detection.
+					</p>
+					<div
+						id="rtl-target"
+						dir="rtl"
+						class="flex gap-3 overflow-x-auto rounded-xl border border-slate-700 bg-slate-900/40 p-3"
+					></div>
+				</section>
+
+				<!-- 10. data-spav-contain -->
+				<section id="contain">
+					<h2 class="mb-1 text-xl font-semibold">data-spav-contain</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						This box is a spatial-navigation container without being a scroll container. Spav
+						prefers candidates inside the current container before escaping it.
+					</p>
+					<div
+						data-spav-contain
+						class="grid grid-cols-3 gap-3 rounded-xl border border-dashed border-indigo-500 bg-slate-900/40 p-4"
+					>
+						<button class="focusable">contained 1</button>
+						<button class="focusable">contained 2</button>
+						<button class="focusable">contained 3</button>
+						<button class="focusable">contained 4</button>
+						<button class="focusable">contained 5</button>
+						<button class="focusable">contained 6</button>
+					</div>
+				</section>
+
+				<!-- 11. Occlusion -->
+				<section id="occlusion">
+					<h2 class="mb-1 text-xl font-semibold">Occlusion</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						The middle button is fully covered by an overlay and should be treated as not visible —
+						navigation should skip it and reach the one behind on the right edge.
+					</p>
+					<div class="relative grid grid-cols-3 gap-3">
+						<button class="focusable">visible left</button>
+						<button class="focusable">covered</button>
+						<button class="focusable">visible right</button>
+						<div
+							class="pointer-events-none absolute inset-y-0 left-1/3 w-1/3 rounded-lg bg-slate-700/95"
+							data-spav-ignore
+						>
+							<span class="flex h-full items-center justify-center text-xs text-slate-300"
+								>overlay</span
+							>
+						</div>
+					</div>
+				</section>
+
+				<!-- 12. Contenteditable -->
+				<section id="editable">
+					<h2 class="mb-1 text-xl font-semibold">Contenteditable</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						Arrow keys move the caret while text remains in the pressed direction; spatial
+						navigation only takes over once the caret reaches the edge.
+					</p>
+					<div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+						<div
+							contenteditable
+							class="focusable min-h-32! items-start! justify-start! rounded-xl p-3 text-left"
+						>
+							Editable region. Put the caret in the middle and press arrows to move it; press again
+							at the boundary to jump out.
+						</div>
+						<div
+							contenteditable="false"
+							tabindex="0"
+							class="focusable min-h-32! items-start! justify-start! rounded-xl p-3 text-left"
+						>
+							contenteditable="false" but tabindex=0 — focusable, escapes immediately.
+						</div>
+					</div>
+				</section>
+
+				<!-- 13. Off-screen / clipped -->
+				<section id="offscreen">
+					<h2 class="mb-1 text-xl font-semibold">Off-screen / clipped</h2>
+					<p class="mb-4 text-sm text-slate-400">
+						The button on the right is pushed outside its clipping parent (no scrollbar) and should
+						be unreachable; the one positioned far off-screen likewise.
+					</p>
+					<div class="grid grid-cols-2 gap-3">
+						<button class="focusable">reachable</button>
+						<div class="h-12 overflow-hidden rounded-lg border border-slate-700">
+							<button class="focusable not-focusable" style="margin-top: 200px">
+								clipped (overflow:hidden)
+							</button>
+						</div>
+					</div>
+					<button class="focusable not-focusable" style="position: absolute; left: -9999px">
+						off-screen left
+					</button>
+				</section>
+
+				<div class="h-32"></div>
+			</main>
 		</div>
 
 		<script type="module" src="/src/main.ts"></script>
