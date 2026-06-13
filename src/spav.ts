@@ -28,6 +28,14 @@ import type {
 	SpavOptions
 } from './types';
 
+const INDICATOR_API_WRITABLE: Record<keyof SpavIndicatorApi, boolean> = {
+	speed: true,
+	padding: true,
+	matchBorderRadius: true,
+	autoRaf: true,
+	raf: false
+};
+
 export class Spav {
 	#rects: Map<Element, DOMRect>;
 	#focusables: Map<Element, boolean>;
@@ -60,14 +68,6 @@ export class Spav {
 
 		const indicator = new SpavIndicator(value === true ? undefined : value);
 		this.#indicator = indicator;
-
-		const INDICATOR_API_WRITABLE: Record<keyof SpavIndicatorApi, boolean> = {
-			speed: true,
-			padding: true,
-			matchBorderRadius: true,
-			autoRaf: true,
-			raf: false
-		};
 
 		const indicatorApi = {} as SpavIndicatorApi;
 

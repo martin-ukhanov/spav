@@ -49,6 +49,8 @@ export function setStyle(element: HTMLElement, style: Partial<CSSStyleDeclaratio
 	Object.assign(element.style, style);
 }
 
+const SCROLL_VALUES = ['auto', 'scroll'];
+
 /**
  * Determines if an element is a scroll container by checking for content overflow
  * and scrollable computed styles. The document root is evaluated on overflow alone.
@@ -63,9 +65,7 @@ export function isScrollContainer(element: Element) {
 	if (element === document.documentElement) return isOverflowX || isOverflowY;
 	if (!isOverflowX && !isOverflowY) return false;
 
-	const SCROLL_VALUES = ['auto', 'scroll'];
 	const style = getComputedStyle(element);
-
 	const canScrollX = SCROLL_VALUES.includes(style.overflowX) && isOverflowX;
 	const canScrollY = SCROLL_VALUES.includes(style.overflowY) && isOverflowY;
 
@@ -115,6 +115,8 @@ export function isFocusableElement(element: Element): element is FocusableElemen
 	);
 }
 
+const TEXT_INPUT_TYPES = ['text', 'search', 'url', 'tel', 'password'];
+
 /**
  * Determines if spatial navigation should escape an element. Editable elements
  * only escape when the caret is collapsed at the relevant directional edge.
@@ -146,8 +148,7 @@ export function isCaretAtEdge(element: Element, direction: SpavDirection) {
 
 	const isTextArea = element instanceof HTMLTextAreaElement;
 	const isTextInput =
-		element instanceof HTMLInputElement &&
-		['text', 'search', 'url', 'tel', 'password'].includes(element.type);
+		element instanceof HTMLInputElement && TEXT_INPUT_TYPES.includes(element.type);
 
 	if ((!isTextArea && !isTextInput) || element.readOnly || element.disabled) {
 		return true;
