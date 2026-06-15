@@ -1,5 +1,6 @@
 {
 	"name": "spav-js",
+	"version": "0.1.7",
 	"description": "Spatial Navigation for the Modern Web",
 	"keywords": [
 		"spav",
@@ -10,7 +11,6 @@
 		"focus",
 		"accessibility"
 	],
-	"version": "0.1.7",
 	"author": "martin-ukhanov",
 	"license": "MIT",
 	"repository": {
