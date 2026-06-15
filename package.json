@@ -17,6 +17,7 @@
 		"type": "git",
 		"url": "git+https://github.com/martin-ukhanov/spav.git"
 	},
+	"homepage": "https://github.com/martin-ukhanov/spav",
 	"type": "module",
 	"files": [
 		"dist"
