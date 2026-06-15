@@ -15,8 +15,6 @@ html {
 body {
 	background-color: var(--color-bg);
 	color: #e6ebf5;
-	font-family:
-		ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
 /* Spav indicator — unstyled by the library, styled here */
