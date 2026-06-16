@@ -48,7 +48,7 @@ export class Spav {
 
 	#origin?: Origin;
 	#activeScrollContainer?: Element;
-	#scrollCheckId?: number;
+	#observer: IntersectionObserver;
 
 	#indicator?: SpavIndicator;
 	#indicatorApi?: SpavIndicatorApi;
@@ -98,6 +98,8 @@ export class Spav {
 		this.#focusables = new Map();
 		this.#scrollContainers = new Map();
 
+		this.#observer = new IntersectionObserver(this.#onIntersect);
+
 		this.indicator = indicator;
 		this.blurOnEscape = blurOnEscape;
 		this.scroll = scroll;
@@ -105,6 +107,7 @@ export class Spav {
 		this.onFocus = onFocus;
 
 		window.addEventListener('keydown', this.#onKeyDown);
+		window.addEventListener('focusin', this.#onFocusIn);
 		window.addEventListener('focusout', this.#onFocusOut);
 		document.addEventListener('pointerup', this.#onPointerUp);
 	}
@@ -149,15 +152,33 @@ export class Spav {
 		}
 	};
 
-	#onFocusOut = (event: FocusEvent) => {
-		const { target, relatedTarget } = event;
-		if (relatedTarget || !(target instanceof Element)) return;
-		this.#origin = { element: target, rect: target.getBoundingClientRect() };
+	#onFocusIn = ({ target }: FocusEvent) => {
+		if (!(target instanceof Element) || target === document.body) return;
+		this.#observer.disconnect();
+		this.#observer.observe(target);
 	};
 
-	#onPointerUp = (event: PointerEvent) => {
-		this.#origin = { rect: new DOMRect(event.clientX, event.clientY) };
+	#onFocusOut = ({ target, relatedTarget }: FocusEvent) => {
+		if (relatedTarget || !(target instanceof Element)) return;
+		this.#origin = { element: target, rect: target.getBoundingClientRect() };
+		this.#observer.disconnect();
+	};
+
+	#onPointerUp = ({ clientX, clientY }: PointerEvent) => {
+		this.#origin = { rect: new DOMRect(clientX, clientY) };
 		this.#activeScrollContainer = undefined;
+	};
+
+	#onIntersect: IntersectionObserverCallback = (entries) => {
+		for (const { isIntersecting, target } of entries) {
+			if (isIntersecting || target !== this.#getFocused() || !isFocusableElement(target)) {
+				continue;
+			}
+
+			target.blur();
+			this.#origin = undefined;
+			this.#activeScrollContainer = this.#getScrollContainer(target);
+		}
 	};
 
 	/**
@@ -588,70 +609,6 @@ export class Spav {
 	}
 
 	/**
-	 * Blurs an element that a scroll has carried out of the viewport,
-	 * handing subsequent navigation over to the scrolled container.
-	 *
-	 * @param focused - The element that was focused when the scroll started.
-	 * @param container - The scrolled container.
-	 */
-	#blurIfHidden(focused: Element, container: Element) {
-		this.#rects.clear(); // Cached rects may be stale due to scroll
-
-		if (
-			focused === this.#getFocused() &&
-			isFocusableElement(focused) &&
-			!this.#isVisible(focused, this.#getRect(document.documentElement))
-		) {
-			focused.blur();
-			this.#origin = undefined;
-			this.#activeScrollContainer = container;
-		}
-	}
-
-	/**
-	 * Runs an out-of-view check on the specified element every frame until
-	 * it is blurred or the specified scrolled container comes to rest.
-	 *
-	 * @param focused - The element that was focused when the scroll started.
-	 * @param container - The scrolled container.
-	 */
-	#scheduleScrollCheck(focused: Element, container: Element) {
-		let { scrollLeft, scrollTop } = container;
-		let stable = 0;
-
-		const poll = () => {
-			this.#scrollCheckId = undefined;
-			this.#blurIfHidden(focused, container);
-
-			// Stop if the element is no longer focused
-			if (document.activeElement !== focused) return;
-
-			if (container.scrollLeft === scrollLeft && container.scrollTop === scrollTop) {
-				stable++;
-			} else {
-				scrollLeft = container.scrollLeft;
-				scrollTop = container.scrollTop;
-				stable = 0;
-			}
-
-			// Stop after two unchanged frames
-			if (stable < 2) this.#scrollCheckId = requestAnimationFrame(poll);
-		};
-
-		this.#scrollCheckId = requestAnimationFrame(poll);
-	}
-
-	/**
-	 * Cancels any pending scroll check.
-	 */
-	#cancelScrollCheck() {
-		if (this.#scrollCheckId !== undefined) {
-			cancelAnimationFrame(this.#scrollCheckId);
-			this.#scrollCheckId = undefined;
-		}
-	}
-
-	/**
 	 * Scrolls a target element into view based on the current configuration.
 	 * Supports disabling the action, applying specific scroll options, or executing a custom scroll function.
 	 *
@@ -715,7 +672,6 @@ export class Spav {
 	 * @param direction - The direction to navigate.
 	 */
 	navigate(direction: SpavDirection) {
-		this.#cancelScrollCheck();
 		this.#rects.clear();
 		this.#focusables.clear();
 		this.#scrollContainers.clear();
@@ -761,14 +717,6 @@ export class Spav {
 
 					// Scroll container entered with no visible targets inside
 					if (!next && this.#isScrollContainer(best)) {
-						const focused = this.#getFocused();
-
-						// Blur focused element if outside scroll container
-						if (focused && !best.contains(focused)) {
-							if (isFocusableElement(focused)) focused.blur();
-							this.#origin = undefined;
-						}
-
 						this.#activeScrollContainer = best;
 						this.#scrollIntoView(best);
 						return;
@@ -817,19 +765,7 @@ export class Spav {
 					(hasUnreachedCandidates || isContainerScroll) &&
 					canScroll(scrollContainer, direction)
 				) {
-					const focused = this.#getFocused();
 					this.#scroll(scrollContainer, direction);
-
-					if (focused) {
-						// Instant scroll
-						this.#blurIfHidden(focused, scrollContainer);
-
-						// Smooth scroll
-						if (document.activeElement === focused) {
-							this.#scheduleScrollCheck(focused, scrollContainer);
-						}
-					}
-
 					return;
 				}
 			}
@@ -843,19 +779,20 @@ export class Spav {
 	 * Cleans up the instance and removes all event listeners.
 	 */
 	destroy() {
-		this.#cancelScrollCheck();
 		this.#rects.clear();
 		this.#focusables.clear();
 		this.#scrollContainers.clear();
 
 		this.#origin = undefined;
 		this.#activeScrollContainer = undefined;
+		this.#observer.disconnect();
 
 		this.#indicator?.destroy();
 		this.#indicator = undefined;
 		this.#indicatorApi = undefined;
 
 		window.removeEventListener('keydown', this.#onKeyDown);
+		window.removeEventListener('focusin', this.#onFocusIn);
 		window.removeEventListener('focusout', this.#onFocusOut);
 		document.removeEventListener('pointerup', this.#onPointerUp);
 	}

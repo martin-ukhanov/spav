@@ -15,10 +15,7 @@ export class SpavIndicator {
 	#scale: { current: number; target: number };
 
 	#isSettled: boolean;
-	#isIntersecting: boolean;
 	#isPointer: boolean;
-
-	#observer: IntersectionObserver;
 
 	#rafId: number | undefined;
 	#lastTime: number | undefined;
@@ -30,7 +27,7 @@ export class SpavIndicator {
 	autoRaf: boolean;
 
 	get #isDormant() {
-		return (!this.#target || !this.#isIntersecting) && !this.#scale.current;
+		return !this.#target && !this.#scale.current;
 	}
 
 	constructor({
@@ -58,10 +55,7 @@ export class SpavIndicator {
 		this.#scale = { current: 0, target: 0 };
 
 		this.#isSettled = true;
-		this.#isIntersecting = true;
 		this.#isPointer = false;
-
-		this.#observer = new IntersectionObserver(this.#onIntersect);
 
 		this.speed = speed;
 		this.padding = padding;
@@ -76,9 +70,7 @@ export class SpavIndicator {
 		window.addEventListener('keydown', this.#onKeyDown, true);
 	}
 
-	#onFocusIn = (event: FocusEvent) => {
-		const { target } = event;
-
+	#onFocusIn = ({ target }: FocusEvent) => {
 		if (
 			!this.#isPointer &&
 			target instanceof Element &&
@@ -93,10 +85,6 @@ export class SpavIndicator {
 			this.#borderRadius.offset = undefined;
 			this.#scale.target = 1;
 
-			this.#isIntersecting = true;
-			this.#observer.disconnect();
-			this.#observer.observe(target);
-
 			if (isInit) {
 				this.#isSettled = true;
 				if (this.matchBorderRadius) this.#borderRadius.current = this.#getBorderRadius(target);
@@ -110,8 +98,8 @@ export class SpavIndicator {
 		}
 	};
 
-	#onFocusOut = (event: FocusEvent) => {
-		if (!event.relatedTarget) this.#hide();
+	#onFocusOut = ({ relatedTarget }: FocusEvent) => {
+		if (!relatedTarget) this.#hide();
 	};
 
 	#onPointerDown = () => {
@@ -120,26 +108,6 @@ export class SpavIndicator {
 
 	#onKeyDown = () => {
 		this.#isPointer = false;
-	};
-
-	#onIntersect: IntersectionObserverCallback = (entries) => {
-		for (const entry of entries) {
-			if (entry.target !== this.#target) continue;
-
-			const wasIntersecting = this.#isIntersecting;
-			this.#isIntersecting = entry.isIntersecting;
-			this.#scale.target = entry.isIntersecting ? 1 : 0;
-
-			if (entry.isIntersecting) {
-				if (!wasIntersecting) {
-					this.#rect.offset = undefined;
-					this.#borderRadius.offset = undefined;
-					this.#isSettled = true;
-				}
-
-				if (this.autoRaf) this.#rafId ??= requestAnimationFrame(this.raf);
-			}
-		}
 	};
 
 	#getBorderRadius(element: FocusableElement, rect?: DOMRect) {
@@ -262,7 +230,6 @@ export class SpavIndicator {
 		this.#target = undefined;
 		this.#isSettled = true;
 		this.#scale.target = 0;
-		this.#observer.disconnect();
 	}
 
 	raf: FrameRequestCallback = (time) => {
@@ -280,7 +247,7 @@ export class SpavIndicator {
 			this.#scale.current = this.#scale.target;
 		}
 
-		if (this.#target && this.#isIntersecting) {
+		if (this.#target) {
 			const rect = this.#target.getBoundingClientRect();
 			const borderRadius = this.matchBorderRadius
 				? this.#getBorderRadius(this.#target, rect)
@@ -306,7 +273,6 @@ export class SpavIndicator {
 			this.#rafId = undefined;
 		}
 
-		this.#observer.disconnect();
 		this.#indicator.remove();
 
 		window.removeEventListener('focusin', this.#onFocusIn);
